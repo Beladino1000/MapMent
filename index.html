@@ -611,6 +611,15 @@
             arrowEl.setAttribute('y1', startPoint.y);
             arrowEl.setAttribute('x2', endPoint.x); 
             arrowEl.setAttribute('y2', endPoint.y);
+
+            // Update arrowhead color to match arrow color
+            const color = arrowEl.getAttribute('stroke') || '#3498db';
+            // Find the marker polygon and set its fill
+            const marker = document.getElementById('arrowhead');
+            if (marker) {
+                const polygon = marker.querySelector('polygon');
+                if (polygon) polygon.setAttribute('fill', color);
+            }
         }
 
         function updateArrowsForBlock(block) {
@@ -686,7 +695,12 @@
         customizeInputs.blockBorder.addEventListener('input', e => { if (selectedBlock) selectedBlock.style.borderColor = e.target.value; });
         customizeInputs.textColor.addEventListener('input', e => { if (selectedBlock) selectedBlock.querySelector('.block-content').style.color = e.target.value; });
         customizeInputs.textSize.addEventListener('input', e => { if (selectedBlock) selectedBlock.querySelector('.block-content').style.fontSize = `${e.target.value}px`; });
-        customizeInputs.arrowColor.addEventListener('input', e => { if (selectedArrow) selectedArrow.setAttribute('stroke', e.target.value); });
+        customizeInputs.arrowColor.addEventListener('input', e => { 
+            if (selectedArrow) {
+                selectedArrow.setAttribute('stroke', e.target.value);
+                updateSingleArrow(selectedArrow); // Ensure arrowhead color updates
+            }
+        });
         customizeInputs.arrowWidth.addEventListener('input', e => { if (selectedArrow) selectedArrow.setAttribute('stroke-width', e.target.value); });
         customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
         customizeInputs.gridLines.addEventListener('input', e => {
