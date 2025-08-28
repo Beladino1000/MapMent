@@ -378,44 +378,23 @@
         function addNewBlock() {
             const blocks = Array.from(document.querySelectorAll('.block'));
             let x, y;
-            const margin = 40;
+            const offset = 25; // How much to offset the new block
             const blockWidth = 200; // Default width
             const blockHeight = 100; // Default height
             const gridRect = grid.getBoundingClientRect();
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            if (blocks.length > 0) {
-                const lastBlock = blocks[blocks.length - 1];
-                const lastX = parseInt(lastBlock.style.left);
-                const lastY = parseInt(lastBlock.style.top);
-                const lastW = lastBlock.offsetWidth;
+            // Use the selected block as a reference, otherwise the last created block
+            const referenceBlock = selectedBlock || (blocks.length > 0 ? blocks[blocks.length - 1] : null);
 
-                // Potential position to the right of the last block
-                const potentialX = lastX + lastW + margin;
-                const potentialY = lastY;
-
-                // Absolute screen position of the potential new block
-                const absoluteX = gridRect.left + potentialX;
-                const absoluteY = gridRect.top + potentialY;
-
-                // Check if this position is within the visible viewport
-                if (
-                    absoluteX >= 0 &&
-                    absoluteY >= 0 &&
-                    absoluteX + blockWidth <= viewportWidth &&
-                    absoluteY + blockHeight <= viewportHeight
-                ) {
-                    // If it fits, use this position
-                    x = potentialX;
-                    y = potentialY;
-                } else {
-                    // Otherwise, place it in the center of the viewport, relative to the grid
-                    x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
-                    y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
-                }
+            if (referenceBlock) {
+                const refX = parseInt(referenceBlock.style.left);
+                const refY = parseInt(referenceBlock.style.top);
+                x = refX + offset;
+                y = refY + offset;
             } else {
-                // If it's the first block, place it in the center of the viewport
+                // If no blocks exist, place it in the center of the viewport
                 x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
                 y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
             }
@@ -673,6 +652,7 @@
             block: document.getElementById('block-controls'), 
             text: document.getElementById('text-controls'), 
             arrow: document.getElementById('arrow-controls'),
+            grid: document.getElementById('grid-controls'), // Added reference
             blockBg: document.getElementById('block-bg-color'), 
             blockBorder: document.getElementById('block-border-color'),
             textColor: document.getElementById('text-color'), 
@@ -686,9 +666,12 @@
         customizePanel.querySelector('.panel-close-btn').addEventListener('click', () => customizePanel.style.display = 'none');
         
         function updateCustomizePanel() {
+            const somethingIsSelected = selectedBlock || selectedArrow;
             customizeInputs.block.classList.toggle('hidden', !selectedBlock);
             customizeInputs.text.classList.toggle('hidden', !selectedBlock);
             customizeInputs.arrow.classList.toggle('hidden', !selectedArrow);
+            customizeInputs.grid.classList.toggle('hidden', somethingIsSelected); // Hide grid controls if something is selected
+
             if (selectedBlock) {
                 const computed = getComputedStyle(selectedBlock); 
                 const content = getComputedStyle(selectedBlock.querySelector('.block-content'));
