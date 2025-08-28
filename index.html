@@ -813,4 +813,185 @@
             const itemToSample = lastSelectedItem || (selection.length > 0 ? selection[selection.length - 1] : null);
             if (!itemToSample) return;
 
-            if
+            if (itemToSample.classList.contains('block')) {
+                const computed = getComputedStyle(itemToSample); 
+                const content = getComputedStyle(itemToSample.querySelector('.block-content'));
+                customizeInputs.blockBg.value = rgbToHex(computed.backgroundColor); 
+                customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
+                customizeInputs.textColor.value = rgbToHex(content.color); 
+                customizeInputs.textSize.value = parseInt(content.fontSize);
+            }
+            if (itemToSample.classList.contains('line')) {
+                customizeInputs.arrowColor.value = rgbToHex(itemToSample.getAttribute('stroke') || '#000000');
+                customizeInputs.arrowWidth.value = itemToSample.getAttribute('stroke-width');
+            }
+        }
+        
+        customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
+        customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
+        customizeInputs.textColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.color = e.target.value; }); });
+        customizeInputs.textSize.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontSize = `${e.target.value}px`; }); });
+        customizeInputs.arrowColor.addEventListener('input', e => { 
+            selection.forEach(item => {
+                if (item.classList.contains('line')) {
+                    item.setAttribute('stroke', e.target.value);
+                    updateSingleArrow(item);
+                }
+            });
+        });
+        customizeInputs.arrowWidth.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('line')) item.setAttribute('stroke-width', e.target.value); }); });
+        customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
+        customizeInputs.gridLines.addEventListener('input', e => {
+            const color = e.target.value;
+            grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`;
+        });
+        
+        // --- Save & Load Logic ---
+        function saveState() {
+            const blocks = Array.from(document.querySelectorAll('.block')).map(block => {
+                const contentEl = block.querySelector('.block-content');
+                return {
+                    id: block.id,
+                    x: parseInt(block.style.left),
+                    y: parseInt(block.style.top),
+                    width: parseInt(block.style.width),
+                    height: parseInt(block.style.height),
+                    bgColor: rgbToHex(getComputedStyle(block).backgroundColor),
+                    borderColor: rgbToHex(getComputedStyle(block).borderColor),
+                    textColor: rgbToHex(getComputedStyle(contentEl).color),
+                    textSize: parseInt(getComputedStyle(contentEl).fontSize),
+                };
+            });
+            
+            const arrows = Array.from(svgCanvas.querySelectorAll('line')).map(arrow => {
+                return {
+                    startBlock: arrow.getAttribute('data-start-block'),
+                    endBlock: arrow.getAttribute('data-end-block'),
+                    color: rgbToHex(arrow.getAttribute('stroke')),
+                    width: parseInt(arrow.getAttribute('stroke-width')),
+                };
+            });
+            
+            const gridBgColor = rgbToHex(getComputedStyle(document.body).backgroundColor);
+            const gridLineColor = rgbToHex(getComputedStyle(grid).backgroundColor.split(',')[0].replace('rgb', 'rgba') + ', 1)');
+            
+            const state = {
+                blocks,
+                arrows,
+                gridBgColor,
+                gridLineColor,
+            };
+            
+            const json = JSON.stringify(state, null, 4);
+            download('grid-state.json', json);
+        }
+
+        function loadState(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    applyState(state);
+                } catch (err) {
+                    console.error('Error parsing JSON:', err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function applyState(state) {
+            // Clear existing blocks and arrows
+            document.querySelectorAll('.block').forEach(block => block.remove());
+            svgCanvas.querySelectorAll('line').forEach(arrow => arrow.remove());
+            
+            // Reset grid position
+            gridX = 0;
+            gridY = 0;
+            grid.style.transform = `translate(${gridX}px, ${gridY}px)`;
+            
+            // Create blocks
+            state.blocks.forEach(createBlock);
+            
+            // Create arrows
+            state.arrows.forEach(arrowData => {
+                const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                arrow.setAttribute('data-start-block', arrowData.startBlock);
+                arrow.setAttribute('data-end-block', arrowData.endBlock);
+                arrow.setAttribute('stroke', arrowData.color);
+                arrow.setAttribute('stroke-width', arrowData.width);
+                arrow.setAttribute('marker-end', 'url(#arrowhead)');
+                svgCanvas.appendChild(arrow);
+                
+                updateSingleArrow(arrow);
+            });
+            
+            // Restore grid colors
+            document.body.style.backgroundColor = state.gridBgColor;
+            const gridLineColor = state.gridLineColor;
+            grid.style.backgroundImage = `linear-gradient(${gridLineColor} 1px, transparent 1px), linear-gradient(90deg, ${gridLineColor} 1px, transparent 1px)`;
+        }
+
+        // --- Utility Functions ---
+        function rgbToHex(rgb) {
+            const rgbArr = rgb.match(/\d+/g);
+            if (!rgbArr) return '#000000';
+            const hex = rgbArr.map(x => {
+                const hexPart = parseInt(x).toString(16);
+                return hexPart.length === 1 ? '0' + hexPart : hexPart;
+            }).join('');
+            return `#${hex}`;
+        }
+
+        function rectsOverlap(r1, r2) {
+            return !(r2.left > r1.right || 
+                     r2.right < r1.left || 
+                     r2.top > r1.bottom ||
+                     r2.bottom < r1.top);
+        }
+        
+        function getBlockCenter(block) {
+            const rect = block.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }
+        
+        function getClosestConnectionPoint(blockA, blockB) {
+            const rectA = blockA.getBoundingClientRect();
+            const rectB = blockB.getBoundingClientRect();
+            
+            const centerA = {
+                x: rectA.left + rectA.width / 2,
+                y: rectA.top + rectA.height / 2
+            };
+            const centerB = {
+                x: rectB.left + rectB.width / 2,
+                y: rectB.top + rectB.height / 2
+            };
+            
+            return {
+                x: (centerA.x + centerB.x) / 2,
+                y: (centerA.y + centerB.y) / 2
+            };
+        }
+        
+        function download(filename, text) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+    });
+    </script>
+</body>
+</html>
