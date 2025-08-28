@@ -370,12 +370,57 @@
             editTextarea.addEventListener('blur', () => finishEditing(block));
             editTextarea.addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; });
             
+// ...existing code...
             new ResizeObserver(() => updateArrowsForBlock(block)).observe(block);
             return block;
         }
 
         function addNewBlock() {
-            selectBlock(createBlock({ x: 150, y: 150, content: "New block." }));
+            const blocks = Array.from(document.querySelectorAll('.block'));
+            let x, y;
+            const margin = 40;
+            const blockWidth = 200; // Default width
+            const blockHeight = 100; // Default height
+            const gridRect = grid.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            if (blocks.length > 0) {
+                const lastBlock = blocks[blocks.length - 1];
+                const lastX = parseInt(lastBlock.style.left);
+                const lastY = parseInt(lastBlock.style.top);
+                const lastW = lastBlock.offsetWidth;
+
+                // Potential position to the right of the last block
+                const potentialX = lastX + lastW + margin;
+                const potentialY = lastY;
+
+                // Absolute screen position of the potential new block
+                const absoluteX = gridRect.left + potentialX;
+                const absoluteY = gridRect.top + potentialY;
+
+                // Check if this position is within the visible viewport
+                if (
+                    absoluteX >= 0 &&
+                    absoluteY >= 0 &&
+                    absoluteX + blockWidth <= viewportWidth &&
+                    absoluteY + blockHeight <= viewportHeight
+                ) {
+                    // If it fits, use this position
+                    x = potentialX;
+                    y = potentialY;
+                } else {
+                    // Otherwise, place it in the center of the viewport, relative to the grid
+                    x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
+                    y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
+                }
+            } else {
+                // If it's the first block, place it in the center of the viewport
+                x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
+                y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
+            }
+
+            selectBlock(createBlock({ x, y, content: "New block." }));
         }
 
         // --- Event Handlers ---
