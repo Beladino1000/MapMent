@@ -205,7 +205,7 @@
         .control-group input[type="color"]::-webkit-color-swatch {
             border-radius: 50%; border: 1px solid #666;
         }
-        .control-group input[type="range"], .control-group input[type="number"] {
+        .control-group input[type="range"], .control-group input[type="number"], .control-group select {
             width: 120px;
         }
         .hidden { display: none !important; }
@@ -293,7 +293,7 @@
             <li data-action="add-text">Add Text Block</li>
             <li data-action="add-image">Insert Image/Video File</li>
             <li data-action="add-link">Insert Video from Link</li>
-            <li data-action="add-desmos">Insert Desmos Calculator</li>
+            <li data-action="add-desmos">Insert Desmos from Link</li>
         </ul>
     </div>
 
@@ -301,7 +301,7 @@
         <div class="panel-header"><h3>Customize</h3><button class="panel-close-btn">&times;</button></div>
         <div class="panel-content">
             <div id="block-controls" class="control-group hidden"><h4>Block</h4><label><span>Background</span><input type="color" id="block-bg-color"></label><label><span>Border</span><input type="color" id="block-border-color"></label></div>
-            <div id="text-controls" class="control-group hidden"><h4>Text</h4><label><span>Color</span><input type="color" id="text-color"></label><label><span>Size (px)</span><input type="number" id="text-size" min="8" max="48" step="1"></label></div>
+            <div id="text-controls" class="control-group hidden"><h4>Text</h4><label><span>Color</span><input type="color" id="text-color"></label><label><span>Size (px)</span><input type="number" id="text-size" min="8" max="48" step="1"></label><label><span>Font</span><select id="text-font" style="background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label></div>
             <div id="arrow-controls" class="control-group hidden"><h4>Arrow</h4><label><span>Color</span><input type="color" id="arrow-color"></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label></div>
             <div id="grid-controls" class="control-group"><h4>Grid</h4><label><span>Background</span><input type="color" id="grid-bg-color"></label><label><span>Line Color</span><input type="color" id="grid-line-color"></label></div>
         </div>
@@ -348,8 +348,8 @@
         }, 30000);
 
         // --- Initial Setup ---
-        createBlock({ x: 100, y: 100, content: "Welcome! Use the buttons below to save or load your work." });
-        createBlock({ x: 450, y: 250, content: "All colors and connections will be saved." });
+        createBlock({ x: 150, y: 150, content: "Welcome! Use the buttons below to save or load your work." });
+        createBlock({ x: 450, y: 150, content: "All colors and connections will be saved." });
 
         // --- Event Listeners ---
         addContentBtn.addEventListener('click', (e) => {
@@ -477,6 +477,7 @@
 
             if (config.textColor) contentEl.style.color = config.textColor;
             if (config.textSize) contentEl.style.fontSize = config.textSize;
+            if (config.textFont) contentEl.style.fontFamily = config.textFont;
             
             block.innerHTML = `<textarea class="block-edit"></textarea>`;
             block.prepend(contentEl);
@@ -727,7 +728,12 @@
                     }
                     break;
                 case 'add-desmos':
-                    addNewBlock('html', `<iframe src="https://www.desmos.com/calculator"></iframe>`);
+                    const desmosUrl = prompt('Enter the Desmos graph URL:');
+                    if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) {
+                        addNewBlock('html', `<iframe src="${desmosUrl}"></iframe>`);
+                    } else if (desmosUrl) {
+                        alert('Invalid Desmos URL.');
+                    }
                     break;
             }
             contextMenu.style.display = 'none';
@@ -1095,11 +1101,12 @@
             block: document.getElementById('block-controls'), 
             text: document.getElementById('text-controls'), 
             arrow: document.getElementById('arrow-controls'),
-            grid: document.getElementById('grid-controls'), // Added reference
+            grid: document.getElementById('grid-controls'),
             blockBg: document.getElementById('block-bg-color'), 
             blockBorder: document.getElementById('block-border-color'),
             textColor: document.getElementById('text-color'), 
             textSize: document.getElementById('text-size'),
+            textFont: document.getElementById('text-font'),
             arrowColor: document.getElementById('arrow-color'), 
             arrowWidth: document.getElementById('arrow-width'),
             gridBg: document.getElementById('grid-bg-color'), 
@@ -1130,6 +1137,9 @@
                     customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
                     customizeInputs.textColor.value = rgbToHex(content.color); 
                     customizeInputs.textSize.value = parseInt(content.fontSize);
+                    const currentFontFamily = content.fontFamily;
+                    const fontOption = Array.from(customizeInputs.textFont.options).find(opt => opt.value === currentFontFamily);
+                    customizeInputs.textFont.value = fontOption ? fontOption.value : customizeInputs.textFont.options[0].value;
                 }
             }
             if (hasArrow) {
@@ -1149,6 +1159,7 @@
         customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
         customizeInputs.textColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.color = e.target.value; }); });
         customizeInputs.textSize.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontSize = `${e.target.value}px`; }); });
+        customizeInputs.textFont.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontFamily = e.target.value; }); });
         customizeInputs.arrowColor.addEventListener('input', e => { 
             selection.forEach(item => {
                 if (item.classList.contains('arrow-group')) {
@@ -1185,6 +1196,7 @@
                         borderColor: block.style.borderColor,
                         textColor: contentEl.style.color,
                         textSize: contentEl.style.fontSize,
+                        textFont: contentEl.style.fontFamily,
                     };
                 }),
                 arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(arrowGroup => {
@@ -1293,32 +1305,52 @@
         }
         
         function getClosestConnectionPoint(from, to) {
-            // This function is restored to correctly find the closest edge point.
-            const fromRect = {
-                x: parseInt(from.style.left),
-                y: parseInt(from.style.top),
-                w: from.offsetWidth,
-                h: from.offsetHeight
-            };
+            // This new logic finds the intersection point on the block's edge
+            // based on the angle between the two block centers.
+            const fromCenter = getBlockCenter(from);
             const toCenter = getBlockCenter(to);
 
-            const points = [
-                // Edges
-                { x: fromRect.x + fromRect.w / 2, y: fromRect.y }, // Top
-                { x: fromRect.x + fromRect.w / 2, y: fromRect.y + fromRect.h }, // Bottom
-                { x: fromRect.x, y: fromRect.y + fromRect.h / 2 }, // Left
-                { x: fromRect.x + fromRect.w, y: fromRect.y + fromRect.h / 2 },  // Right
-                // Corners
-                { x: fromRect.x, y: fromRect.y }, // Top-Left
-                { x: fromRect.x + fromRect.w, y: fromRect.y }, // Top-Right
-                { x: fromRect.x, y: fromRect.y + fromRect.h }, // Bottom-Left
-                { x: fromRect.x + fromRect.w, y: fromRect.y + fromRect.h }  // Bottom-Right
-            ];
+            const dx = toCenter.x - fromCenter.x;
+            const dy = toCenter.y - fromCenter.y;
+            
+            const halfW = from.offsetWidth / 2;
+            const halfH = from.offsetHeight / 2;
 
-            return points.reduce((closest, p) => {
-                const dist = Math.hypot(p.x - toCenter.x, p.y - toCenter.y);
-                return dist < closest.dist ? { point: p, dist: dist } : closest;
-            }, { dist: Infinity }).point;
+            // Handle case where blocks are at the exact same center to avoid division by zero
+            if (dx === 0 && dy === 0) {
+                return { x: fromCenter.x - halfW, y: fromCenter.y - halfH };
+            }
+
+            // Calculate the slope of the line from center to center
+            const slope = dy / dx;
+
+            // Calculate the slope of the diagonals of the block (aspect ratio)
+            const diagSlope = halfH / halfW;
+
+            let point = { x: 0, y: 0 };
+            
+            // Determine which edge the line intersects based on the slope
+            if (Math.abs(slope) < diagSlope) {
+                // Intersects with left or right side
+                if (dx > 0) { // Right side
+                    point.x = fromCenter.x + halfW;
+                    point.y = fromCenter.y + halfW * slope;
+                } else { // Left side
+                    point.x = fromCenter.x - halfW;
+                    point.y = fromCenter.y - halfW * slope;
+                }
+            } else {
+                // Intersects with top or bottom side
+                if (dy > 0) { // Bottom side
+                    point.y = fromCenter.y + halfH;
+                    point.x = fromCenter.x + halfH / slope;
+                } else { // Top side
+                    point.y = fromCenter.y - halfH;
+                    point.x = fromCenter.x - halfH / slope;
+                }
+            }
+            
+            return point;
         }
         
         function download(filename, text) {
