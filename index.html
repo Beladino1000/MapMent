@@ -1019,36 +1019,99 @@
 
         // --- Arrow and Coordinate Updates ---
         function updateSingleArrow(arrowGroup) {
+            // This function is now a simple wrapper. The main logic is in updateArrowsForBlock.
             const startBlock = document.getElementById(arrowGroup.dataset.startBlock);
             const endBlock = document.getElementById(arrowGroup.dataset.endBlock);
-            if (!startBlock || !endBlock) return;
-
-            const arrowLine = arrowGroup.querySelector('.arrow-line');
-            const hitbox = arrowGroup.querySelector('.arrow-hitbox');
-            if (!arrowLine || !hitbox) return;
-
-            const startPoint = getClosestConnectionPoint(startBlock, endBlock);
-            const endPoint = getClosestConnectionPoint(endBlock, startBlock);
-            
-            [arrowLine, hitbox].forEach(el => {
-                el.setAttribute('x1', startPoint.x); 
-                el.setAttribute('y1', startPoint.y);
-                el.setAttribute('x2', endPoint.x); 
-                el.setAttribute('y2', endPoint.y);
-            });
-
-            // Update arrowhead color to match arrow color
-            const color = arrowLine.getAttribute('stroke') || '#3498db';
-            const marker = document.getElementById('arrowhead');
-            if (marker) {
-                const polygon = marker.querySelector('polygon');
-                if (polygon) polygon.setAttribute('fill', color);
-            }
+            if (startBlock) updateArrowsForBlock(startBlock);
+            if (endBlock) updateArrowsForBlock(endBlock);
         }
 
         function updateArrowsForBlock(block) {
             const blockId = block.id;
-            svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(updateSingleArrow);
+            const blockRect = {
+                x: parseInt(block.style.left),
+                y: parseInt(block.style.top),
+                w: block.offsetWidth,
+                h: block.offsetHeight
+            };
+
+            const outgoingArrows = Array.from(svgCanvas.querySelectorAll(`[data-start-block="${blockId}"]`));
+            const incomingArrows = Array.from(svgCanvas.querySelectorAll(`[data-end-block="${blockId}"]`));
+
+            // Group arrows by which edge they connect to
+            const edgeConnections = { top: [], bottom: [], left: [], right: [] };
+
+            [...outgoingArrows, ...incomingArrows].forEach(arrow => {
+                const isOutgoing = arrow.dataset.startBlock === blockId;
+                const otherBlockId = isOutgoing ? arrow.dataset.endBlock : arrow.dataset.startBlock;
+                const otherBlock = document.getElementById(otherBlockId);
+                if (!otherBlock) return;
+
+                const otherBlockCenter = getBlockCenter(otherBlock);
+                const edge = getClosestEdge(blockRect, otherBlockCenter);
+                edgeConnections[edge].push({ arrow, isOutgoing });
+            });
+
+            // Calculate and apply new connection points for each edge
+            for (const edge in edgeConnections) {
+                const connections = edgeConnections[edge];
+                const n = connections.length;
+                if (n === 0) continue;
+
+                // Sort connections for stable ordering
+                connections.sort((a, b) => {
+                    const blockA = document.getElementById(a.isOutgoing ? a.arrow.dataset.endBlock : a.arrow.dataset.startBlock);
+                    const blockB = document.getElementById(b.isOutgoing ? b.arrow.dataset.endBlock : b.arrow.dataset.startBlock);
+                    if (!blockA || !blockB) return 0;
+                    
+                    const centerA = getBlockCenter(blockA);
+                    const centerB = getBlockCenter(blockB);
+
+                    if (edge === 'top' || edge === 'bottom') return centerA.x - centerB.x; // Sort by X for horizontal edges
+                    return centerA.y - centerB.y; // Sort by Y for vertical edges
+                });
+
+                connections.forEach(({ arrow, isOutgoing }, i) => {
+                    const point = { x: 0, y: 0 };
+                    const segment = i + 1;
+
+                    switch (edge) {
+                        case 'top':
+                            point.x = blockRect.x + (blockRect.w * segment / (n + 1));
+                            point.y = blockRect.y;
+                            break;
+                        case 'bottom':
+                            point.x = blockRect.x + (blockRect.w * segment / (n + 1));
+                            point.y = blockRect.y + blockRect.h;
+                            break;
+                        case 'left':
+                            point.x = blockRect.x;
+                            point.y = blockRect.y + (blockRect.h * segment / (n + 1));
+                            break;
+                        case 'right':
+                            point.x = blockRect.x + blockRect.w;
+                            point.y = blockRect.y + (blockRect.h * segment / (n + 1));
+                            break;
+                    }
+
+                    const arrowLine = arrow.querySelector('.arrow-line');
+                    const hitbox = arrow.querySelector('.arrow-hitbox');
+                    const pointToUpdate = isOutgoing ? { x1: 'x1', y1: 'y1' } : { x2: 'x2', y2: 'y2' };
+                    
+                    arrowLine.setAttribute(pointToUpdate.x1, point.x);
+                    arrowLine.setAttribute(pointToUpdate.y1, point.y);
+                    hitbox.setAttribute(pointToUpdate.x1, point.x);
+                    hitbox.setAttribute(pointToUpdate.y1, point.y);
+
+                    // Update arrowhead color
+                    const color = arrowLine.getAttribute('stroke') || '#3498db';
+                    const marker = document.getElementById('arrowhead');
+                    if (marker) {
+                        const polygon = marker.querySelector('polygon');
+                        if (polygon) polygon.setAttribute('fill', color);
+                    }
+                });
+            }
         }
 
         function updateCoordinates() {
@@ -1292,8 +1355,29 @@
             };
         }
         
+        function getClosestEdge(rect, targetPoint) {
+            const points = {
+                top:    { x: rect.x + rect.w / 2, y: rect.y },
+                bottom: { x: rect.x + rect.w / 2, y: rect.y + rect.h },
+                left:   { x: rect.x, y: rect.y + rect.h / 2 },
+                right:  { x: rect.x + rect.w, y: rect.y + rect.h / 2 }
+            };
+
+            let closestEdge = 'top';
+            let minDistance = Infinity;
+
+            for (const edge in points) {
+                const dist = Math.hypot(points[edge].x - targetPoint.x, points[edge].y - targetPoint.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestEdge = edge;
+                }
+            }
+            return closestEdge;
+        }
+
         function getClosestConnectionPoint(from, to) {
-            // This function is restored to correctly find the closest edge point.
+            // This function is now only used for initial arrow drawing, not for updates.
             const fromRect = {
                 x: parseInt(from.style.left),
                 y: parseInt(from.style.top),
