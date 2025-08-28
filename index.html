@@ -272,11 +272,12 @@
         const fileLoader = document.getElementById('file-loader');
         const customizePanel = document.getElementById('customize-panel');
         const shortcutHint = document.getElementById('shortcut-hint');
-
+    
         // --- State Variables ---
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
         let currentBlock = null, selectedBlock = null, selectedArrow = null, arrowStartBlock = null;
         let startX, startY, initialBlockX, initialBlockY;
+        let dragDeltaX = 0, dragDeltaY = 0; // For transform-based dragging
         let gridX = 0, gridY = 0, blockCounter = 1;
         let tempArrow = null;
         let ctrlPressed = false;
@@ -536,18 +537,30 @@
             startY = e.clientY;
             initialBlockX = parseInt(currentBlock.style.left); 
             initialBlockY = parseInt(currentBlock.style.top);
+            dragDeltaX = 0;
+            dragDeltaY = 0;
+            // Add a class to prevent transitions during drag for instant feedback
+            currentBlock.style.transition = 'none';
         }
 
         function dragBlock(e) {
-            const deltaX = e.clientX - startX; 
-            const deltaY = e.clientY - startY;
-            currentBlock.style.left = `${Math.max(0, initialBlockX + deltaX)}px`;
-            currentBlock.style.top = `${Math.max(0, initialBlockY + deltaY)}px`;
+            dragDeltaX = e.clientX - startX; 
+            dragDeltaY = e.clientY - startY;
+            currentBlock.style.transform = `translate(${dragDeltaX}px, ${dragDeltaY}px)`;
             updateCoordinates(); 
             updateArrowsForBlock(currentBlock);
         }
 
         function stopDragging() { 
+            if (isDragging && currentBlock) {
+                // Remove the inline styles to re-enable CSS transitions
+                currentBlock.style.transition = '';
+                currentBlock.style.transform = 'none';
+                // Commit the final position
+                currentBlock.style.left = `${Math.max(0, initialBlockX + dragDeltaX)}px`;
+                currentBlock.style.top = `${Math.max(0, initialBlockY + dragDeltaY)}px`;
+                updateArrowsForBlock(currentBlock); // Final update
+            }
             isDragging = false; 
             currentBlock = null; 
         }
@@ -629,8 +642,8 @@
 
         function updateCoordinates() {
             if (selectedBlock) {
-                const x = parseInt(selectedBlock.style.left); 
-                const y = parseInt(selectedBlock.style.top);
+                const x = parseInt(selectedBlock.style.left) + (isDragging && selectedBlock === currentBlock ? dragDeltaX : 0);
+                const y = parseInt(selectedBlock.style.top) + (isDragging && selectedBlock === currentBlock ? dragDeltaY : 0);
                 coordsDisplay.innerHTML = `X: ${x}, Y: ${y}`;
             }
         }
@@ -802,15 +815,19 @@
 
         // --- Utility & Helper Functions ---
         function getBlockCenter(block) {
-            const x = parseInt(block.style.left); 
-            const y = parseInt(block.style.top);
+            const isDraggingBlock = isDragging && currentBlock === block;
+            const x = parseInt(block.style.left) + (isDraggingBlock ? dragDeltaX : 0);
+            const y = parseInt(block.style.top) + (isDraggingBlock ? dragDeltaY : 0);
             return { x: x + block.offsetWidth / 2, y: y + block.offsetHeight / 2 };
         }
 
         function getClosestConnectionPoint(from, to) {
+            const isFromDragging = isDragging && currentBlock === from;
+            const isToDragging = isDragging && currentBlock === to;
+
             const fromRect = { 
-                x: parseInt(from.style.left), 
-                y: parseInt(from.style.top), 
+                x: parseInt(from.style.left) + (isFromDragging ? dragDeltaX : 0), 
+                y: parseInt(from.style.top) + (isFromDragging ? dragDeltaY : 0), 
                 w: from.offsetWidth, 
                 h: from.offsetHeight 
             };
