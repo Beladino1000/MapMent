@@ -85,10 +85,12 @@
             padding: 15px;
             cursor: move;
             overflow: hidden;
-            transition: all 0.3s;
+            transition: border-color 0.3s, box-shadow 0.3s; /* Removed 'all' for performance */
             user-select: none;
             z-index: 10;
-            resize: both;
+            resize: none; /* Disable default resize handle */
+            display: flex; /* Use flexbox for content layout */
+            flex-direction: column;
         }
 
         .block.selected {
@@ -104,6 +106,16 @@
             min-height: 30px;
             overflow-wrap: break-word;
             transition: color 0.3s, font-size 0.3s;
+            flex-grow: 1; /* Allow content to fill space */
+        }
+
+        .block-content iframe,
+        .block-content img,
+        .block-content video {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 5px;
         }
 
         .block-edit {
@@ -219,6 +231,33 @@
             font-family: monospace;
             font-size: 0.85em;
         }
+
+        /* --- Context Menu --- */
+        #context-menu {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            background: rgba(50, 50, 50, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+        }
+        #context-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #context-menu li {
+            padding: 8px 15px;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #context-menu li:hover {
+            background: #3498db;
+        }
     </style>
 </head>
 <body>
@@ -242,11 +281,20 @@
     </div>
 
     <div class="control-panel">
-        <button class="control-btn" id="add-block-btn"><span class="btn-icon">+</span><span>Add block</span></button>
+        <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Add Content</span></button>
         <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Arrow</span></button>
         <button class="control-btn" id="toggle-customize-btn"><span class="btn-icon">🎨</span><span>Customize</span></button>
         <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Save</span></button>
         <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Load</span></button>
+    </div>
+
+    <div id="context-menu">
+        <ul>
+            <li data-action="add-text">Add Text Block</li>
+            <li data-action="add-image">Insert Image/Video File</li>
+            <li data-action="add-link">Insert Video from Link</li>
+            <li data-action="add-desmos">Insert Desmos Calculator</li>
+        </ul>
     </div>
 
     <div id="customize-panel">
@@ -268,7 +316,7 @@
         const svgCanvas = document.getElementById('arrow-svg');
         const coordsDisplay = document.getElementById('coordinates');
         const instructions = document.getElementById('instructions');
-        const addBlockBtn = document.getElementById('add-block-btn');
+        const addContentBtn = document.getElementById('add-content-btn');
         const toggleArrowModeBtn = document.getElementById('toggle-arrow-mode-btn');
         const toggleCustomizeBtn = document.getElementById('toggle-customize-btn');
         const saveBtn = document.getElementById('save-btn');
@@ -276,15 +324,19 @@
         const fileLoader = document.getElementById('file-loader');
         const customizePanel = document.getElementById('customize-panel');
         const shortcutHint = document.getElementById('shortcut-hint');
+        const contextMenu = document.getElementById('context-menu');
     
         // --- State Variables ---
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
+        let isResizing = false;
+        let resizeDirection = '';
         let currentBlock = null, arrowStartBlock = null;
         let selection = []; // Use an array for multi-selection
         let lastSelectedItem = null; // Track the last item clicked
         let startX, startY;
         let dragInitialPositions = []; // Store initial positions for multi-drag
         let potentialDeselectItem = null; // Defer deselection until mouseup
+        let contextMenuX, contextMenuY;
         let gridX = 0, gridY = 0, blockCounter = 1;
         let tempArrow = null;
         let ctrlPressed = false;
@@ -300,7 +352,24 @@
         createBlock({ x: 450, y: 250, content: "All colors and connections will be saved." });
 
         // --- Event Listeners ---
-        addBlockBtn.addEventListener('click', addNewBlock);
+        addContentBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent document click from closing the menu immediately
+            
+            // Clear context menu coordinates so new blocks are positioned relative to selection, not the button
+            contextMenuX = null;
+            contextMenuY = null;
+
+            const rect = addContentBtn.getBoundingClientRect();
+            
+            // Show the menu to calculate its height, then position it
+            contextMenu.style.visibility = 'hidden';
+            contextMenu.style.display = 'block';
+            const menuHeight = contextMenu.offsetHeight;
+            contextMenu.style.visibility = 'visible';
+
+            contextMenu.style.left = `${rect.left}px`;
+            contextMenu.style.top = `${rect.top - menuHeight - 10}px`; // 10px gap above button
+        });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         saveBtn.addEventListener('click', saveState);
         loadBtn.addEventListener('click', () => fileLoader.click());
@@ -310,6 +379,9 @@
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('keyup', handleKeyUp);
         grid.addEventListener('mousedown', handleGridMouseDown);
+        grid.addEventListener('contextmenu', handleGridContextMenu);
+        document.addEventListener('click', () => contextMenu.style.display = 'none');
+        contextMenu.addEventListener('click', handleContextMenuClick);
         svgCanvas.addEventListener('click', handleArrowClick);
         coordsDisplay.addEventListener('dblclick', editCoordinates);
 
@@ -389,22 +461,29 @@
             block.className = 'block';
             block.style.left = `${config.x}px`;
             block.style.top = `${config.y}px`;
-            if (config.width) block.style.width = `${config.width}px`;
-            if (config.height) block.style.height = `${config.height}px`;
+            block.style.width = config.width || '200px';
+            block.style.height = config.height || '100px';
             if (config.bgColor) block.style.backgroundColor = config.bgColor;
             if (config.borderColor) block.style.borderColor = config.borderColor;
             
             const contentEl = document.createElement('div');
             contentEl.className = 'block-content';
-            contentEl.textContent = config.content;
+            
+            if (config.content) {
+                contentEl.textContent = config.content;
+            } else if (config.htmlContent) {
+                contentEl.innerHTML = config.htmlContent;
+            }
+
             if (config.textColor) contentEl.style.color = config.textColor;
-            if (config.textSize) contentEl.style.fontSize = `${config.textSize}px`;
+            if (config.textSize) contentEl.style.fontSize = config.textSize;
             
             block.innerHTML = `<textarea class="block-edit"></textarea>`;
             block.prepend(contentEl);
             grid.appendChild(block);
 
             block.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
+            block.addEventListener('mousemove', (e) => handleBlockMouseMove(e, block));
             contentEl.addEventListener('dblclick', () => startEditing(block));
             const editTextarea = block.querySelector('.block-edit');
             editTextarea.addEventListener('keydown', (e) => handleTextEditKeyDown(e, block));
@@ -415,7 +494,7 @@
             return block;
         }
 
-        function addNewBlock() {
+        function addNewBlock(contentType = 'text', contentData = 'New block.') {
             const blocks = Array.from(document.querySelectorAll('.block'));
             let x, y;
             const offset = 25; // How much to offset the new block
@@ -429,12 +508,18 @@
             const referenceBlock = (lastSelectedItem && lastSelectedItem.classList.contains('block')) ? lastSelectedItem : (blocks.length > 0 ? blocks[blocks.length - 1] : null);
 
             const placeInCenter = () => {
-                // Place in the center of the current viewport, accounting for grid pan
-                x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
-                y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
+                // Use context menu position if available, otherwise center of viewport
+                const gridRect = grid.getBoundingClientRect();
+                if (contextMenuX && contextMenuY) {
+                    x = contextMenuX - gridRect.left;
+                    y = contextMenuY - gridRect.top;
+                } else {
+                    x = Math.max(0, Math.round((window.innerWidth - blockWidth) / 2 - gridRect.left));
+                    y = Math.max(0, Math.round((window.innerHeight - blockHeight) / 2 - gridRect.top));
+                }
             };
 
-            if (referenceBlock) {
+            if (referenceBlock && !(contextMenuX && contextMenuY)) {
                 const refX = parseInt(referenceBlock.style.left);
                 const refY = parseInt(referenceBlock.style.top);
                 const potentialX = refX + offset;
@@ -456,13 +541,38 @@
                 placeInCenter();
             }
 
-            const newBlock = createBlock({ x, y, content: "New block." });
+            let config = { x, y };
+            switch (contentType) {
+                case 'text':
+                    config.content = contentData;
+                    break;
+                case 'html':
+                    config.htmlContent = contentData;
+                    // Auto-resize for embedded content
+                    config.width = '480px';
+                    config.height = '360px';
+                    break;
+            }
+
+            const newBlock = createBlock(config);
             updateSelection(newBlock, false); // Select the new block
         }
 
         // --- Event Handlers ---
         function handleBlockMouseDown(e, block) {
             if (isEditing) return;
+
+            const resizeHandle = getResizeHandle(e, block);
+            if (resizeHandle) {
+                isResizing = true;
+                resizeDirection = resizeHandle;
+                currentBlock = block;
+                startX = e.clientX;
+                startY = e.clientY;
+                e.stopPropagation();
+                return;
+            }
+
             if (isArrowMode || ctrlPressed) {
                 startArrow(e, block);
             } else {
@@ -486,7 +596,17 @@
             }
         }
 
+        function handleBlockMouseMove(e, block) {
+            if (isResizing || isDragging) return;
+            const handle = getResizeHandle(e, block);
+            document.body.style.cursor = handle ? `${handle}-resize` : 'default';
+        }
+
         function handleMouseMove(e) {
+            if (isResizing) {
+                resizeBlock(e);
+                return;
+            }
             if (isDragging && currentBlock) {
                 // If the mouse moves, it's a drag, so cancel any potential deselection.
                 potentialDeselectItem = null;
@@ -514,6 +634,11 @@
 
             if (isDrawingArrow) endArrow(e);
             if (isDragging) stopDragging();
+            if (isResizing) {
+                isResizing = false;
+                currentBlock = null;
+                document.body.style.cursor = 'default';
+            }
             if (isPanning) {
                 isPanning = false;
                 instructions.textContent = "Hold Shift + Drag to pan";
@@ -533,6 +658,80 @@
                 }
             }
         }
+
+        function handleGridContextMenu(e) {
+            e.preventDefault();
+            contextMenuX = e.clientX;
+            contextMenuY = e.clientY;
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.top = `${e.clientY}px`;
+            contextMenu.style.display = 'block';
+        }
+
+        function handleContextMenuClick(e) {
+            const action = e.target.dataset.action;
+            if (!action) return;
+
+            switch (action) {
+                case 'add-text':
+                    addNewBlock('text');
+                    break;
+                case 'add-image':
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/*,video/*';
+                    fileInput.onchange = e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = res => {
+                                let html;
+                                if (file.type.startsWith('image/')) {
+                                    html = `<img src="${res.target.result}" alt="User content">`;
+                                } else if (file.type.startsWith('video/')) {
+                                    html = `<video src="${res.target.result}" controls></video>`;
+                                }
+                                addNewBlock('html', html);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    fileInput.click();
+                    break;
+                case 'add-link':
+                    const url = prompt('Enter YouTube, Vimeo, or Google Drive video URL:');
+                    if (url) {
+                        let embedUrl;
+                        if (url.includes('youtube.com/watch?v=')) {
+                            const videoId = new URL(url).searchParams.get('v');
+                            embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                        } else if (url.includes('youtu.be/')) {
+                            const videoId = new URL(url).pathname.slice(1);
+                            embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                        } else if (url.includes('vimeo.com/')) {
+                            const videoId = new URL(url).pathname.slice(1);
+                            embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                        } else if (url.includes('drive.google.com/file/d/')) {
+                            const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+                            if (match && match[1]) {
+                                const fileId = match[1];
+                                embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                            }
+                        }
+                        
+                        if (embedUrl) {
+                            addNewBlock('html', `<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`);
+                        } else {
+                            alert('Invalid or unsupported video URL.');
+                        }
+                    }
+                    break;
+                case 'add-desmos':
+                    addNewBlock('html', `<iframe src="https://www.desmos.com/calculator"></iframe>`);
+                    break;
+            }
+            contextMenu.style.display = 'none';
+        }
         
         function handleArrowClick(e) {
             const group = e.target.closest('.arrow-group');
@@ -543,8 +742,12 @@
         }
 
         function handleKeyDown(e) {
+            // If editing text, don't process any global shortcuts.
+            // The 'Escape' key is handled by a separate listener on the textarea itself.
+            if (isEditing) return;
+
             // Handle Ctrl key for arrow mode
-            if (e.key === 'Control' && !isEditing) {
+            if (e.key === 'Control') {
                 ctrlPressed = true;
                 if (!isArrowMode) {
                     isArrowMode = true;
@@ -554,7 +757,7 @@
                 }
             }
             
-            if (e.key === 'Delete' && !isEditing) {
+            if (e.key === 'Delete') {
                 selection.forEach(item => {
                     if (item.classList.contains('block')) {
                         const blockId = item.id;
@@ -649,6 +852,57 @@
         }
 
         // --- Dragging, Panning, and Arrow Drawing ---
+        function getResizeHandle(e, block) {
+            const rect = block.getBoundingClientRect();
+            const margin = 10;
+            let handle = '';
+
+            if (e.clientY < rect.top + margin) handle += 'n';
+            else if (e.clientY > rect.bottom - margin) handle += 's';
+
+            if (e.clientX < rect.left + margin) handle += 'w';
+            else if (e.clientX > rect.right - margin) handle += 'e';
+            
+            return handle;
+        }
+
+        function resizeBlock(e) {
+            if (!isResizing || !currentBlock) return;
+            const rect = currentBlock.getBoundingClientRect();
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            let newWidth = rect.width;
+            let newHeight = rect.height;
+            let newLeft = rect.left;
+            let newTop = rect.top;
+
+            if (resizeDirection.includes('e')) newWidth += dx;
+            if (resizeDirection.includes('w')) {
+                newWidth -= dx;
+                newLeft += dx;
+            }
+            if (resizeDirection.includes('s')) newHeight += dy;
+            if (resizeDirection.includes('n')) {
+                newHeight -= dy;
+                newTop += dy;
+            }
+
+            const minSize = 50;
+            if (newWidth > minSize) {
+                currentBlock.style.width = `${newWidth}px`;
+                currentBlock.style.left = `${newLeft - grid.getBoundingClientRect().left}px`;
+            }
+            if (newHeight > minSize) {
+                currentBlock.style.height = `${newHeight}px`;
+                currentBlock.style.top = `${newTop - grid.getBoundingClientRect().top}px`;
+            }
+            
+            startX = e.clientX;
+            startY = e.clientY;
+            updateArrowsForBlock(currentBlock);
+        }
+
         function startDragging(e, block) {
             currentBlock = block; 
             isDragging = true;
@@ -915,9 +1169,14 @@
             const state = {
                 blocks: Array.from(document.querySelectorAll('.block')).map(block => {
                     const contentEl = block.querySelector('.block-content');
+                    // Check if the block contains any child elements like iframes, images, or videos.
+                    const hasHtmlContent = contentEl.children.length > 0 && (contentEl.querySelector('iframe, img, video'));
+                    
                     return {
                         id: block.id,
-                        content: contentEl.textContent,
+                        // If it has HTML content, save the innerHTML. Otherwise, save the text content.
+                        content: hasHtmlContent ? null : contentEl.textContent,
+                        htmlContent: hasHtmlContent ? contentEl.innerHTML : null,
                         x: parseInt(block.style.left),
                         y: parseInt(block.style.top),
                         width: block.style.width,
