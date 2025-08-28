@@ -371,7 +371,6 @@
             editTextarea.addEventListener('blur', () => finishEditing(block));
             editTextarea.addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; });
             
-// ...existing code...
             new ResizeObserver(() => updateArrowsForBlock(block)).observe(block);
             return block;
         }
@@ -815,35 +814,37 @@
 
         // --- Utility & Helper Functions ---
         function getBlockCenter(block) {
-            const isDraggingBlock = isDragging && currentBlock === block;
-            const x = parseInt(block.style.left) + (isDraggingBlock ? dragDeltaX : 0);
-            const y = parseInt(block.style.top) + (isDraggingBlock ? dragDeltaY : 0);
-            return { x: x + block.offsetWidth / 2, y: y + block.offsetHeight / 2 };
+            const rect = block.getBoundingClientRect();
+            const gridRect = grid.getBoundingClientRect();
+            return {
+                x: rect.left - gridRect.left + rect.width / 2,
+                y: rect.top - gridRect.top + rect.height / 2
+            };
         }
 
         function getClosestConnectionPoint(from, to) {
-            const isFromDragging = isDragging && currentBlock === from;
-            const isToDragging = isDragging && currentBlock === to;
-
-            const fromRect = { 
-                x: parseInt(from.style.left) + (isFromDragging ? dragDeltaX : 0), 
-                y: parseInt(from.style.top) + (isFromDragging ? dragDeltaY : 0), 
-                w: from.offsetWidth, 
-                h: from.offsetHeight 
-            };
+            const fromRect = from.getBoundingClientRect();
+            const gridRect = grid.getBoundingClientRect();
             const toCenter = getBlockCenter(to);
+
+            const fromAbs = {
+                x: fromRect.left - gridRect.left,
+                y: fromRect.top - gridRect.top,
+                w: fromRect.width,
+                h: fromRect.height
+            };
+
             const points = [
-                { x: fromRect.x + fromRect.w / 2, y: fromRect.y }, 
-                { x: fromRect.x + fromRect.w / 2, y: fromRect.y + fromRect.h },
-                { x: fromRect.x, y: fromRect.y + fromRect.h / 2 }, 
-                { x: fromRect.x + fromRect.w, y: fromRect.y + fromRect.h / 2 }
+                { x: fromAbs.x + fromAbs.w / 2, y: fromAbs.y }, // Top
+                { x: fromAbs.x + fromAbs.w / 2, y: fromAbs.y + fromAbs.h }, // Bottom
+                { x: fromAbs.x, y: fromAbs.y + fromAbs.h / 2 }, // Left
+                { x: fromAbs.x + fromAbs.w, y: fromAbs.y + fromAbs.h / 2 } // Right
             ];
-            return points.reduce((closest, p) => 
-                (Math.hypot(p.x - toCenter.x, p.y - toCenter.y) < closest.dist ? 
-                    { point: p, dist: Math.hypot(p.x - toCenter.x, p.y - toCenter.y) } : 
-                    closest), 
-                { dist: Infinity }
-            ).point;
+
+            return points.reduce((closest, p) => {
+                const dist = Math.hypot(p.x - toCenter.x, p.y - toCenter.y);
+                return dist < closest.dist ? { point: p, dist: dist } : closest;
+            }, { dist: Infinity }).point;
         }
 
         function rgbToHex(rgb) {
