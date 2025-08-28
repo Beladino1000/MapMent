@@ -249,7 +249,6 @@
 
     <div class="control-panel">
         <button class="control-btn" id="add-block-btn"><span class="btn-icon">+</span><span>Add block</span></button>
-        <button class="control-btn" id="select-area-btn"><span class="btn-icon">⬚</span><span>Select</span></button>
         <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Arrow</span></button>
         <button class="control-btn" id="toggle-customize-btn"><span class="btn-icon">🎨</span><span>Customize</span></button>
         <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Save</span></button>
@@ -277,7 +276,6 @@
         const coordsDisplay = document.getElementById('coordinates');
         const instructions = document.getElementById('instructions');
         const addBlockBtn = document.getElementById('add-block-btn');
-        const selectAreaBtn = document.getElementById('select-area-btn');
         const toggleArrowModeBtn = document.getElementById('toggle-arrow-mode-btn');
         const toggleCustomizeBtn = document.getElementById('toggle-customize-btn');
         const saveBtn = document.getElementById('save-btn');
@@ -310,7 +308,6 @@
 
         // --- Event Listeners ---
         addBlockBtn.addEventListener('click', addNewBlock);
-        selectAreaBtn.addEventListener('click', toggleAreaSelectMode);
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         saveBtn.addEventListener('click', saveState);
         loadBtn.addEventListener('click', () => fileLoader.click());
@@ -469,17 +466,14 @@
         function handleMouseUp(e) {
             if (isDrawingArrow) endArrow(e);
             if (isDragging) stopDragging();
-            if (isAreaSelecting) endAreaSelect();
+            if (isAreaSelecting) endAreaSelect(e);
         }
 
         function handleGridMouseDown(e) {
             if (e.target !== grid) return;
 
-            if (isAreaSelecting) {
-                startAreaSelect(e);
-            } else if (!e.shiftKey) {
-                deselectAll();
-            }
+            // Area selection is now the default for dragging on the grid
+            startAreaSelect(e);
         }
         
         function handleArrowClick(e) {
@@ -621,14 +615,9 @@
             grid.style.transform = `translate(${gridX}px, ${gridY}px)`;
         }
 
-        function toggleAreaSelectMode() {
-            isAreaSelecting = !isAreaSelecting;
-            selectAreaBtn.classList.toggle('active', isAreaSelecting);
-            instructions.textContent = isAreaSelecting ? "Drag to select multiple items" : "Hold Shift + Drag to pan";
-            if (isAreaSelecting && isArrowMode) toggleArrowMode(); // Can't do both
-        }
-
         function startAreaSelect(e) {
+            isAreaSelecting = true;
+            document.body.style.userSelect = 'none'; // Prevent text selection
             startX = e.clientX;
             startY = e.clientY;
             selectionRectEl.style.left = `${startX}px`;
@@ -650,11 +639,16 @@
             selectionRectEl.style.height = `${Math.abs(height)}px`;
         }
 
-        function endAreaSelect() {
+        function endAreaSelect(e) {
+            isAreaSelecting = false;
+            document.body.style.userSelect = ''; // Re-enable text selection
             selectionRectEl.style.display = 'none';
             const rect = selectionRectEl.getBoundingClientRect();
             
-            if (!e.shiftKey) deselectAll();
+            // Only deselect if not holding shift
+            if (!e.shiftKey) {
+                deselectAll();
+            }
             lastSelectedItem = null; // Area select doesn't have a "last selected"
 
             document.querySelectorAll('.block').forEach(block => {
@@ -666,11 +660,17 @@
                     }
                 }
             });
-            // Note: Selecting arrows with this method is complex and omitted for simplicity.
             
-            isAreaSelecting = false;
-            selectAreaBtn.classList.remove('active');
-            instructions.textContent = "Hold Shift + Drag to pan";
+            svgCanvas.querySelectorAll('line').forEach(arrow => {
+                const arrowRect = arrow.getBoundingClientRect();
+                 if (rectsOverlap(rect, arrowRect)) {
+                    if (!selection.includes(arrow)) {
+                        selection.push(arrow);
+                        arrow.classList.add('selected');
+                    }
+                }
+            });
+            
             updateUIState();
         }
 
@@ -680,7 +680,6 @@
             document.body.classList.toggle('arrow-mode', isArrowMode);
             toggleArrowModeBtn.classList.toggle('active', isArrowMode);
             instructions.textContent = isArrowMode ? "Click & drag between blocks" : "Hold Shift + Drag to pan";
-            if (isArrowMode && isAreaSelecting) toggleAreaSelectMode(); // Can't do both
         }
 
         function startArrow(e, block) {
@@ -810,238 +809,8 @@
             customizeInputs.arrow.classList.toggle('hidden', !hasArrow);
             customizeInputs.grid.classList.toggle('hidden', hasBlock || hasArrow);
 
-            const item = lastSelectedItem || (selection.length > 0 ? selection[0] : null);
-            if (!item) return;
+            // Populate inputs based on the last selected item, if available
+            const itemToSample = lastSelectedItem || (selection.length > 0 ? selection[selection.length - 1] : null);
+            if (!itemToSample) return;
 
-            if (item.classList.contains('block')) {
-                const computed = getComputedStyle(item); 
-                const content = getComputedStyle(item.querySelector('.block-content'));
-                customizeInputs.blockBg.value = rgbToHex(computed.backgroundColor); 
-                customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
-                customizeInputs.textColor.value = rgbToHex(content.color); 
-                customizeInputs.textSize.value = parseInt(content.fontSize);
-            }
-            if (item.classList.contains('line')) {
-                customizeInputs.arrowColor.value = rgbToHex(item.getAttribute('stroke') || '#000000');
-                customizeInputs.arrowWidth.value = item.getAttribute('stroke-width');
-            }
-        }
-        
-        customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
-        customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
-        customizeInputs.textColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.color = e.target.value; }); });
-        customizeInputs.textSize.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontSize = `${e.target.value}px`; }); });
-        customizeInputs.arrowColor.addEventListener('input', e => { 
-            selection.forEach(item => {
-                if (item.classList.contains('line')) {
-                    item.setAttribute('stroke', e.target.value);
-                    updateSingleArrow(item);
-                }
-            });
-        });
-        customizeInputs.arrowWidth.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('line')) item.setAttribute('stroke-width', e.target.value); }); });
-        customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
-        customizeInputs.gridLines.addEventListener('input', e => {
-            const color = hexToRgba(e.target.value, 0.1);
-            grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`;
-        });
-        
-        // --- Save & Load Logic ---
-        function saveState() {
-            const state = { blocks: [], arrows: [], styles: {} };
-            
-            // Save block data
-            document.querySelectorAll('.block').forEach(block => {
-                const contentEl = block.querySelector('.block-content');
-                state.blocks.push({
-                    id: block.id,
-                    x: parseInt(block.style.left), 
-                    y: parseInt(block.style.top),
-                    width: block.offsetWidth, 
-                    height: block.offsetHeight,
-                    content: contentEl.textContent,
-                    bgColor: block.style.backgroundColor, 
-                    borderColor: block.style.borderColor,
-                    textColor: contentEl.style.color, 
-                    textSize: parseInt(contentEl.style.fontSize)
-                });
-            });
-
-            // Save arrow data
-            svgCanvas.querySelectorAll('line').forEach(arrow => {
-                state.arrows.push({
-                    start: arrow.dataset.startBlock, 
-                    end: arrow.dataset.endBlock,
-                    color: arrow.getAttribute('stroke'), 
-                    width: arrow.getAttribute('stroke-width')
-                });
-            });
-
-            // Save global styles
-            state.styles.gridBg = document.body.style.background;
-            state.styles.gridLines = grid.style.backgroundImage;
-
-            // Trigger download
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "grid-schema.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-        }
-
-        function loadState(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const state = JSON.parse(e.target.result);
-                    
-                    // Clear current state
-                    document.querySelectorAll('.block').forEach(b => b.remove());
-                    svgCanvas.querySelectorAll('line').forEach(a => a.remove());
-                    deselectAll();
-
-                    // Load global styles
-                    if (state.styles) {
-                        if (state.styles.gridBg) document.body.style.background = state.styles.gridBg;
-                        if (state.styles.gridLines) grid.style.backgroundImage = state.styles.gridLines;
-                    }
-
-                    // Load blocks
-                    let maxId = 0;
-                    state.blocks.forEach(blockData => {
-                        createBlock(blockData);
-                        const idNum = parseInt(blockData.id.split('-')[1]);
-                        if (idNum > maxId) maxId = idNum;
-                    });
-                    blockCounter = maxId + 1; // Prevent ID conflicts
-
-                    // Load arrows
-                    state.arrows.forEach(arrowData => {
-                        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        arrow.dataset.startBlock = arrowData.start;
-                        arrow.dataset.endBlock = arrowData.end;
-                        arrow.setAttribute('stroke', arrowData.color);
-                        arrow.setAttribute('stroke-width', arrowData.width);
-                        arrow.setAttribute('marker-end', 'url(#arrowhead)');
-                        svgCanvas.appendChild(arrow);
-                        updateSingleArrow(arrow);
-                    });
-                } catch (error) {
-                    console.error("Error parsing JSON file:", error);
-                    alert("Failed to load file. It may be corrupted or not a valid schema.");
-                }
-            };
-            reader.readAsText(file);
-            fileLoader.value = ''; // Reset input for next load
-        }
-
-        // --- Utility & Helper Functions ---
-        function getBlockCenter(block) {
-            const rect = block.getBoundingClientRect();
-            const gridRect = grid.getBoundingClientRect();
-            return {
-                x: rect.left - gridRect.left + rect.width / 2,
-                y: rect.top - gridRect.top + rect.height / 2
-            };
-        }
-
-        function getClosestConnectionPoint(from, to) {
-            const fromRect = from.getBoundingClientRect();
-            const gridRect = grid.getBoundingClientRect();
-            const toCenter = getBlockCenter(to);
-
-            const fromAbs = {
-                x: fromRect.left - gridRect.left,
-                y: fromRect.top - gridRect.top,
-                w: fromRect.width,
-                h: fromRect.height
-            };
-
-            const points = [
-                { x: fromAbs.x + fromAbs.w / 2, y: fromAbs.y }, // Top
-                { x: fromAbs.x + fromAbs.w / 2, y: fromAbs.y + fromAbs.h }, // Bottom
-                { x: fromAbs.x, y: fromAbs.y + fromAbs.h / 2 }, // Left
-                { x: fromAbs.x + fromAbs.w, y: fromAbs.y + fromAbs.h / 2 } // Right
-            ];
-
-            return points.reduce((closest, p) => {
-                const dist = Math.hypot(p.x - toCenter.x, p.y - toCenter.y);
-                return dist < closest.dist ? { point: p, dist: dist } : closest;
-            }, { dist: Infinity }).point;
-        }
-
-        function rectsOverlap(rect1, rect2) {
-            return !(rect1.right < rect2.left || 
-                     rect1.left > rect2.right || 
-                     rect1.bottom < rect2.top || 
-                     rect1.top > rect2.bottom);
-        }
-
-        function rgbToHex(rgb) {
-            if (!rgb || !rgb.startsWith('rgb')) return '#ffffff';
-            let [r, g, b] = rgb.match(/\d+/g).map(Number);
-            return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).padStart(6, '0')}`;
-        }
-        
-        function hexToRgba(hex, alpha) {
-            const r = parseInt(hex.slice(1, 3), 16), 
-                  g = parseInt(hex.slice(3, 5), 16), 
-                  b = parseInt(hex.slice(5, 7), 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-
-        // --- Draggable Panel ---
-        let panelDrag = { active: false, x: 0, y: 0 };
-        customizePanel.querySelector('.panel-header').addEventListener('mousedown', e => {
-            panelDrag.active = true; 
-            panelDrag.x = e.clientX - customizePanel.offsetLeft; 
-            panelDrag.y = e.clientY - customizePanel.offsetTop;
-        });
-        document.addEventListener('mousemove', e => {
-            if (panelDrag.active) {
-                customizePanel.style.left = `${e.clientX - panelDrag.x}px`;
-                customizePanel.style.top = `${e.clientY - panelDrag.y}px`;
-            }
-        });
-        document.addEventListener('mouseup', () => panelDrag.active = false);
-        
-        // --- Text Editing ---
-        function startEditing(block) {
-            isEditing = true;
-            const content = block.querySelector('.block-content'), 
-                  textarea = block.querySelector('.block-edit');
-            textarea.value = content.textContent; 
-            content.style.display = 'none'; 
-            textarea.style.display = 'block'; 
-            textarea.focus();
-            textarea.style.height = 'auto';
-            textarea.style.height = `${textarea.scrollHeight}px`;
-        }
-        
-        function finishEditing(block) {
-            isEditing = false;
-            const content = block.querySelector('.block-content'), 
-                  textarea = block.querySelector('.block-edit');
-            content.textContent = textarea.value; 
-            textarea.style.display = 'none'; 
-            content.style.display = 'block';
-        }
-        
-        function handleTextEditKeyDown(e, block) {
-            if (e.key === 'Enter' && !e.shiftKey) { 
-                e.preventDefault(); 
-                finishEditing(block); 
-            }
-            else if (e.key === 'Escape') { 
-                finishEditing(block); 
-            }
-        }
-    });
-    </script>
-</body>
-</html>
+            if
