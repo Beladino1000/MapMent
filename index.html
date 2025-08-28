@@ -141,6 +141,16 @@
         .control-btn:hover { background: #3498db; transform: translateY(-2px); }
         .btn-icon { font-size: 16px; }
 
+        /* --- Selection Rectangle --- */
+        #selection-rect {
+            position: absolute;
+            border: 1px dashed #3498db;
+            background: rgba(52, 152, 219, 0.2);
+            pointer-events: none;
+            z-index: 9999;
+            display: none;
+        }
+
         /* --- Customize Panel --- */
         #customize-panel {
             display: none;
@@ -239,6 +249,7 @@
 
     <div class="control-panel">
         <button class="control-btn" id="add-block-btn"><span class="btn-icon">+</span><span>Add block</span></button>
+        <button class="control-btn" id="select-area-btn"><span class="btn-icon">⬚</span><span>Select</span></button>
         <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Arrow</span></button>
         <button class="control-btn" id="toggle-customize-btn"><span class="btn-icon">🎨</span><span>Customize</span></button>
         <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Save</span></button>
@@ -255,6 +266,7 @@
         </div>
     </div>
     
+    <div id="selection-rect"></div>
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
     <script>
@@ -265,6 +277,7 @@
         const coordsDisplay = document.getElementById('coordinates');
         const instructions = document.getElementById('instructions');
         const addBlockBtn = document.getElementById('add-block-btn');
+        const selectAreaBtn = document.getElementById('select-area-btn');
         const toggleArrowModeBtn = document.getElementById('toggle-arrow-mode-btn');
         const toggleCustomizeBtn = document.getElementById('toggle-customize-btn');
         const saveBtn = document.getElementById('save-btn');
@@ -272,10 +285,13 @@
         const fileLoader = document.getElementById('file-loader');
         const customizePanel = document.getElementById('customize-panel');
         const shortcutHint = document.getElementById('shortcut-hint');
+        const selectionRectEl = document.getElementById('selection-rect');
     
         // --- State Variables ---
-        let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
-        let currentBlock = null, selectedBlock = null, selectedArrow = null, arrowStartBlock = null;
+        let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false, isAreaSelecting = false;
+        let currentBlock = null, arrowStartBlock = null;
+        let selection = [];
+        let lastSelectedItem = null;
         let startX, startY, initialBlockX, initialBlockY;
         let dragDeltaX = 0, dragDeltaY = 0; // For transform-based dragging
         let gridX = 0, gridY = 0, blockCounter = 1;
@@ -294,6 +310,7 @@
 
         // --- Event Listeners ---
         addBlockBtn.addEventListener('click', addNewBlock);
+        selectAreaBtn.addEventListener('click', toggleAreaSelectMode);
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         saveBtn.addEventListener('click', saveState);
         loadBtn.addEventListener('click', () => fileLoader.click());
@@ -302,7 +319,7 @@
         document.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('keyup', handleKeyUp);
-        grid.addEventListener('click', handleGridClick);
+        grid.addEventListener('mousedown', handleGridMouseDown);
         svgCanvas.addEventListener('click', handleArrowClick);
         coordsDisplay.addEventListener('dblclick', editCoordinates);
 
@@ -317,28 +334,39 @@
         });
 
         // --- Selection Logic ---
-        function selectBlock(block) {
-            deselectAll();
-            selectedBlock = block;
-            selectedBlock.classList.add('selected');
-            updateCoordinates();
-            updateCustomizePanel();
-        }
+        function updateSelection(item, shiftKey) {
+            if (!shiftKey) {
+                deselectAll();
+            }
 
-        function selectArrow(arrow) {
-            deselectAll();
-            selectedArrow = arrow;
-            selectedArrow.classList.add('selected');
-            coordsDisplay.textContent = "Arrow selected";
-            updateCustomizePanel();
+            const index = selection.indexOf(item);
+            if (index > -1) {
+                // Already selected, remove it (if shift-clicking)
+                if (shiftKey) {
+                    item.classList.remove('selected');
+                    selection.splice(index, 1);
+                    if (lastSelectedItem === item) {
+                        lastSelectedItem = selection.length > 0 ? selection[selection.length - 1] : null;
+                    }
+                }
+            } else {
+                // Not selected, add it
+                item.classList.add('selected');
+                selection.push(item);
+                lastSelectedItem = item;
+            }
+            updateUIState();
         }
 
         function deselectAll() {
-            if (selectedBlock) selectedBlock.classList.remove('selected');
-            if (selectedArrow) selectedArrow.classList.remove('selected');
-            selectedBlock = null;
-            selectedArrow = null;
-            coordsDisplay.textContent = "Nothing selected";
+            selection.forEach(item => item.classList.remove('selected'));
+            selection = [];
+            lastSelectedItem = null;
+            updateUIState();
+        }
+
+        function updateUIState() {
+            updateCoordinates();
             updateCustomizePanel();
         }
 
@@ -385,47 +413,80 @@
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
 
-            // Use the selected block as a reference, otherwise the last created block
-            const referenceBlock = selectedBlock || (blocks.length > 0 ? blocks[blocks.length - 1] : null);
+            // Use the last selected block as a reference, otherwise the last created block
+            const referenceBlock = (lastSelectedItem && lastSelectedItem.classList.contains('block')) ? lastSelectedItem : (blocks.length > 0 ? blocks[blocks.length - 1] : null);
+
+            const placeInCenter = () => {
+                // Place in the center of the current viewport, accounting for grid pan
+                x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
+                y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
+            };
 
             if (referenceBlock) {
                 const refX = parseInt(referenceBlock.style.left);
                 const refY = parseInt(referenceBlock.style.top);
-                x = refX + offset;
-                y = refY + offset;
+                const potentialX = refX + offset;
+                const potentialY = refY + offset;
+
+                // Check if the potential position is within the viewport
+                // We need to account for the grid's own offset (pan)
+                const screenX = potentialX + gridRect.left;
+                const screenY = potentialY + gridRect.top;
+
+                if (screenX > 0 && screenX < viewportWidth - blockWidth && screenY > 0 && screenY < viewportHeight - blockHeight) {
+                    x = potentialX;
+                    y = potentialY;
+                } else {
+                    placeInCenter();
+                }
             } else {
-                // If no blocks exist, place it in the center of the viewport
-                x = Math.max(0, Math.round((viewportWidth - blockWidth) / 2 - gridRect.left));
-                y = Math.max(0, Math.round((viewportHeight - blockHeight) / 2 - gridRect.top));
+                // If no blocks exist, place it in the center
+                placeInCenter();
             }
 
-            selectBlock(createBlock({ x, y, content: "New block." }));
+            const newBlock = createBlock({ x, y, content: "New block." });
+            updateSelection(newBlock, false);
         }
 
         // --- Event Handlers ---
         function handleBlockMouseDown(e, block) {
             if (isEditing) return;
-            if (isArrowMode || ctrlPressed) startArrow(e, block);
-            else { selectBlock(block); startDragging(e, block); }
+            if (isArrowMode || ctrlPressed) {
+                startArrow(e, block);
+            } else {
+                updateSelection(block, e.shiftKey);
+                startDragging(e, block);
+            }
         }
 
         function handleMouseMove(e) {
             if (isPanning && e.shiftKey) panGrid(e);
             else if (isDragging && currentBlock) dragBlock(e);
             else if (isDrawingArrow) drawArrow(e);
+            else if (isAreaSelecting) dragSelectionRect(e);
         }
 
         function handleMouseUp(e) {
             if (isDrawingArrow) endArrow(e);
             if (isDragging) stopDragging();
+            if (isAreaSelecting) endAreaSelect();
         }
 
-        function handleGridClick(e) {
-            if (e.target === grid) deselectAll();
+        function handleGridMouseDown(e) {
+            if (e.target !== grid) return;
+
+            if (isAreaSelecting) {
+                startAreaSelect(e);
+            } else if (!e.shiftKey) {
+                deselectAll();
+            }
         }
         
         function handleArrowClick(e) {
-            if (e.target.tagName === 'line') { e.stopPropagation(); selectArrow(e.target); }
+            if (e.target.tagName === 'line') {
+                e.stopPropagation();
+                updateSelection(e.target, e.shiftKey);
+            }
         }
 
         function handleKeyDown(e) {
@@ -446,15 +507,14 @@
             }
             
             if (e.key === 'Delete' && !isEditing) {
-                if (selectedBlock) {
-                    const blockId = selectedBlock.id;
-                    svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(a => a.remove());
-                    selectedBlock.remove(); 
-                    deselectAll();
-                } else if (selectedArrow) { 
-                    selectedArrow.remove(); 
-                    deselectAll(); 
-                }
+                selection.forEach(item => {
+                    if (item.classList.contains('block')) {
+                        const blockId = item.id;
+                        svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(a => a.remove());
+                    }
+                    item.remove();
+                });
+                deselectAll();
             }
             
             // New shortcuts
@@ -535,9 +595,21 @@
                 currentBlock.style.transition = '';
                 currentBlock.style.transform = 'none';
                 // Commit the final position
-                currentBlock.style.left = `${Math.max(0, initialBlockX + dragDeltaX)}px`;
-                currentBlock.style.top = `${Math.max(0, initialBlockY + dragDeltaY)}px`;
-                updateArrowsForBlock(currentBlock); // Final update
+                const newX = Math.max(0, initialBlockX + dragDeltaX);
+                const newY = Math.max(0, initialBlockY + dragDeltaY);
+
+                const deltaX = newX - parseInt(currentBlock.style.left);
+                const deltaY = newY - parseInt(currentBlock.style.top);
+
+                selection.forEach(item => {
+                    if (item.classList.contains('block')) {
+                        const currentX = parseInt(item.style.left);
+                        const currentY = parseInt(item.style.top);
+                        item.style.left = `${currentX + deltaX}px`;
+                        item.style.top = `${currentY + deltaY}px`;
+                        updateArrowsForBlock(item);
+                    }
+                });
             }
             isDragging = false; 
             currentBlock = null; 
@@ -549,12 +621,66 @@
             grid.style.transform = `translate(${gridX}px, ${gridY}px)`;
         }
 
+        function toggleAreaSelectMode() {
+            isAreaSelecting = !isAreaSelecting;
+            selectAreaBtn.classList.toggle('active', isAreaSelecting);
+            instructions.textContent = isAreaSelecting ? "Drag to select multiple items" : "Hold Shift + Drag to pan";
+            if (isAreaSelecting && isArrowMode) toggleArrowMode(); // Can't do both
+        }
+
+        function startAreaSelect(e) {
+            startX = e.clientX;
+            startY = e.clientY;
+            selectionRectEl.style.left = `${startX}px`;
+            selectionRectEl.style.top = `${startY}px`;
+            selectionRectEl.style.width = '0px';
+            selectionRectEl.style.height = '0px';
+            selectionRectEl.style.display = 'block';
+        }
+
+        function dragSelectionRect(e) {
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            const width = currentX - startX;
+            const height = currentY - startY;
+
+            selectionRectEl.style.left = `${width > 0 ? startX : currentX}px`;
+            selectionRectEl.style.top = `${height > 0 ? startY : currentY}px`;
+            selectionRectEl.style.width = `${Math.abs(width)}px`;
+            selectionRectEl.style.height = `${Math.abs(height)}px`;
+        }
+
+        function endAreaSelect() {
+            selectionRectEl.style.display = 'none';
+            const rect = selectionRectEl.getBoundingClientRect();
+            
+            if (!e.shiftKey) deselectAll();
+            lastSelectedItem = null; // Area select doesn't have a "last selected"
+
+            document.querySelectorAll('.block').forEach(block => {
+                const blockRect = block.getBoundingClientRect();
+                if (rectsOverlap(rect, blockRect)) {
+                    if (!selection.includes(block)) {
+                        selection.push(block);
+                        block.classList.add('selected');
+                    }
+                }
+            });
+            // Note: Selecting arrows with this method is complex and omitted for simplicity.
+            
+            isAreaSelecting = false;
+            selectAreaBtn.classList.remove('active');
+            instructions.textContent = "Hold Shift + Drag to pan";
+            updateUIState();
+        }
+
         function toggleArrowMode() {
             isArrowMode = !isArrowMode;
             ctrlPressed = isArrowMode;
             document.body.classList.toggle('arrow-mode', isArrowMode);
             toggleArrowModeBtn.classList.toggle('active', isArrowMode);
             instructions.textContent = isArrowMode ? "Click & drag between blocks" : "Hold Shift + Drag to pan";
+            if (isArrowMode && isAreaSelecting) toggleAreaSelectMode(); // Can't do both
         }
 
         function startArrow(e, block) {
@@ -619,26 +745,36 @@
         }
 
         function updateCoordinates() {
-            if (selectedBlock) {
-                const x = parseInt(selectedBlock.style.left) + (isDragging && selectedBlock === currentBlock ? dragDeltaX : 0);
-                const y = parseInt(selectedBlock.style.top) + (isDragging && selectedBlock === currentBlock ? dragDeltaY : 0);
-                coordsDisplay.innerHTML = `X: ${x}, Y: ${y}`;
+            if (selection.length > 1) {
+                coordsDisplay.innerHTML = `${selection.length} items selected`;
+            } else if (selection.length === 1) {
+                const item = selection[0];
+                if (item.classList.contains('block')) {
+                    const x = parseInt(item.style.left);
+                    const y = parseInt(item.style.top);
+                    coordsDisplay.innerHTML = `X: ${x}, Y: ${y}`;
+                } else {
+                    coordsDisplay.innerHTML = `Arrow selected`;
+                }
+            } else {
+                coordsDisplay.textContent = "Nothing selected";
             }
         }
         
         function editCoordinates() {
-            if (!selectedBlock || isEditing) return;
-            const x = parseInt(selectedBlock.style.left); 
-            const y = parseInt(selectedBlock.style.top);
+            const blockToEdit = lastSelectedItem && lastSelectedItem.classList.contains('block') ? lastSelectedItem : null;
+            if (!blockToEdit || isEditing) return;
+            const x = parseInt(blockToEdit.style.left); 
+            const y = parseInt(blockToEdit.style.top);
             coordsDisplay.innerHTML = `X: <input type="number" value="${x}" id="coord-x"> Y: <input type="number" value="${y}" id="coord-y">`;
             const inputX = document.getElementById('coord-x'); 
             const inputY = document.getElementById('coord-y');
             inputX.focus(); 
             inputX.select();
             const apply = () => {
-                selectedBlock.style.left = `${parseInt(inputX.value) || 0}px`;
-                selectedBlock.style.top = `${parseInt(inputY.value) || 0}px`;
-                updateArrowsForBlock(selectedBlock); 
+                blockToEdit.style.left = `${parseInt(inputX.value) || 0}px`;
+                blockToEdit.style.top = `${parseInt(inputY.value) || 0}px`;
+                updateArrowsForBlock(blockToEdit); 
                 updateCoordinates();
             };
             [inputX, inputY].forEach(input => {
@@ -666,37 +802,44 @@
         customizePanel.querySelector('.panel-close-btn').addEventListener('click', () => customizePanel.style.display = 'none');
         
         function updateCustomizePanel() {
-            const somethingIsSelected = selectedBlock || selectedArrow;
-            customizeInputs.block.classList.toggle('hidden', !selectedBlock);
-            customizeInputs.text.classList.toggle('hidden', !selectedBlock);
-            customizeInputs.arrow.classList.toggle('hidden', !selectedArrow);
-            customizeInputs.grid.classList.toggle('hidden', somethingIsSelected); // Hide grid controls if something is selected
+            const hasBlock = selection.some(item => item.classList.contains('block'));
+            const hasArrow = selection.some(item => item.classList.contains('line'));
+            
+            customizeInputs.block.classList.toggle('hidden', !hasBlock);
+            customizeInputs.text.classList.toggle('hidden', !hasBlock);
+            customizeInputs.arrow.classList.toggle('hidden', !hasArrow);
+            customizeInputs.grid.classList.toggle('hidden', hasBlock || hasArrow);
 
-            if (selectedBlock) {
-                const computed = getComputedStyle(selectedBlock); 
-                const content = getComputedStyle(selectedBlock.querySelector('.block-content'));
+            const item = lastSelectedItem || (selection.length > 0 ? selection[0] : null);
+            if (!item) return;
+
+            if (item.classList.contains('block')) {
+                const computed = getComputedStyle(item); 
+                const content = getComputedStyle(item.querySelector('.block-content'));
                 customizeInputs.blockBg.value = rgbToHex(computed.backgroundColor); 
                 customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
                 customizeInputs.textColor.value = rgbToHex(content.color); 
                 customizeInputs.textSize.value = parseInt(content.fontSize);
             }
-            if (selectedArrow) {
-                customizeInputs.arrowColor.value = rgbToHex(selectedArrow.getAttribute('stroke') || '#000000');
-                customizeInputs.arrowWidth.value = selectedArrow.getAttribute('stroke-width');
+            if (item.classList.contains('line')) {
+                customizeInputs.arrowColor.value = rgbToHex(item.getAttribute('stroke') || '#000000');
+                customizeInputs.arrowWidth.value = item.getAttribute('stroke-width');
             }
         }
         
-        customizeInputs.blockBg.addEventListener('input', e => { if (selectedBlock) selectedBlock.style.backgroundColor = e.target.value; });
-        customizeInputs.blockBorder.addEventListener('input', e => { if (selectedBlock) selectedBlock.style.borderColor = e.target.value; });
-        customizeInputs.textColor.addEventListener('input', e => { if (selectedBlock) selectedBlock.querySelector('.block-content').style.color = e.target.value; });
-        customizeInputs.textSize.addEventListener('input', e => { if (selectedBlock) selectedBlock.querySelector('.block-content').style.fontSize = `${e.target.value}px`; });
+        customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
+        customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
+        customizeInputs.textColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.color = e.target.value; }); });
+        customizeInputs.textSize.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontSize = `${e.target.value}px`; }); });
         customizeInputs.arrowColor.addEventListener('input', e => { 
-            if (selectedArrow) {
-                selectedArrow.setAttribute('stroke', e.target.value);
-                updateSingleArrow(selectedArrow); // Ensure arrowhead color updates
-            }
+            selection.forEach(item => {
+                if (item.classList.contains('line')) {
+                    item.setAttribute('stroke', e.target.value);
+                    updateSingleArrow(item);
+                }
+            });
         });
-        customizeInputs.arrowWidth.addEventListener('input', e => { if (selectedArrow) selectedArrow.setAttribute('stroke-width', e.target.value); });
+        customizeInputs.arrowWidth.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('line')) item.setAttribute('stroke-width', e.target.value); }); });
         customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
         customizeInputs.gridLines.addEventListener('input', e => {
             const color = hexToRgba(e.target.value, 0.1);
@@ -763,8 +906,10 @@
                     deselectAll();
 
                     // Load global styles
-                    document.body.style.background = state.styles.gridBg;
-                    grid.style.backgroundImage = state.styles.gridLines;
+                    if (state.styles) {
+                        if (state.styles.gridBg) document.body.style.background = state.styles.gridBg;
+                        if (state.styles.gridLines) grid.style.backgroundImage = state.styles.gridLines;
+                    }
 
                     // Load blocks
                     let maxId = 0;
@@ -828,6 +973,13 @@
                 const dist = Math.hypot(p.x - toCenter.x, p.y - toCenter.y);
                 return dist < closest.dist ? { point: p, dist: dist } : closest;
             }, { dist: Infinity }).point;
+        }
+
+        function rectsOverlap(rect1, rect2) {
+            return !(rect1.right < rect2.left || 
+                     rect1.left > rect2.right || 
+                     rect1.bottom < rect2.top || 
+                     rect1.top > rect2.bottom);
         }
 
         function rgbToHex(rgb) {
