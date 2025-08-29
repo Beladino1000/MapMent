@@ -122,6 +122,8 @@
             display: none; width: 100%; height: auto; min-height: 80px;
             border: 2px solid #3498db; border-radius: 5px; padding: 10px;
             font-family: inherit; line-height: 1.4; resize: none; overflow: hidden;
+            background-color: transparent; /* Ensure it matches block bg */
+            color: inherit; /* Ensure it matches text color */
         }
 
         .coordinates {
@@ -263,11 +265,7 @@
     <div class="container">
         <div class="grid" id="grid">
             <svg id="arrow-svg">
-                <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="8" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="#3498db" />
-                    </marker>
-                </defs>
+                <defs></defs>
             </svg>
         </div>
     </div>
@@ -313,6 +311,7 @@
         // --- Element References ---
         const grid = document.getElementById('grid');
         const svgCanvas = document.getElementById('arrow-svg');
+        const svgDefs = svgCanvas.querySelector('defs');
         const coordsDisplay = document.getElementById('coordinates');
         const instructions = document.getElementById('instructions');
         const addContentBtn = document.getElementById('add-content-btn');
@@ -332,7 +331,7 @@
         let currentBlock = null, arrowStartBlock = null;
         let selection = []; // Use an array for multi-selection
         let lastSelectedItem = null; // Track the last item clicked
-        let startX, startY;
+        let startX, startY, mouseMoved = false; // Add mouseMoved flag
         let dragInitialPositions = []; // Store initial positions for multi-drag
         let potentialDeselectItem = null; // Defer deselection until mouseup
         let contextMenuX, contextMenuY;
@@ -352,22 +351,16 @@
 
         // --- Event Listeners ---
         addContentBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent document click from closing the menu immediately
-            
-            // Clear context menu coordinates so new blocks are positioned relative to selection, not the button
+            e.stopPropagation(); 
             contextMenuX = null;
             contextMenuY = null;
-
             const rect = addContentBtn.getBoundingClientRect();
-            
-            // Show the menu to calculate its height, then position it
             contextMenu.style.visibility = 'hidden';
             contextMenu.style.display = 'block';
             const menuHeight = contextMenu.offsetHeight;
             contextMenu.style.visibility = 'visible';
-
             contextMenu.style.left = `${rect.left}px`;
-            contextMenu.style.top = `${rect.top - menuHeight - 10}px`; // 10px gap above button
+            contextMenu.style.top = `${rect.top - menuHeight - 10}px`;
         });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         saveBtn.addEventListener('click', saveState);
@@ -382,9 +375,8 @@
         document.addEventListener('click', () => contextMenu.style.display = 'none');
         contextMenu.addEventListener('click', handleContextMenuClick);
         svgCanvas.addEventListener('click', handleArrowClick);
-        coordsDisplay.addEventListener('dblclick', editCoordinates);
+        coordsDisplay.addEventListener('click', editCoordinates);
 
-        // Customize panel toggle
         toggleCustomizeBtn.addEventListener('click', () => {
             if (customizePanel.style.display === 'block') {
                 customizePanel.style.display = 'none';
@@ -399,10 +391,8 @@
             if (!shiftKey) {
                 deselectAll();
             }
-
             const index = selection.indexOf(item);
             if (index > -1) {
-                // Already selected, remove it (if shift-clicking)
                 if (shiftKey) {
                     item.classList.remove('selected');
                     selection.splice(index, 1);
@@ -411,7 +401,6 @@
                     }
                 }
             } else {
-                // Not selected, add it
                 item.classList.add('selected');
                 selection.push(item);
                 lastSelectedItem = item;
@@ -427,20 +416,12 @@
         }
 
         function updateUIState() {
-            // Auto-select arrows if both connected blocks are selected
-            const selectedBlockIds = new Set(
-                selection
-                    .filter(item => item.classList.contains('block'))
-                    .map(block => block.id)
-            );
-
+            const selectedBlockIds = new Set(selection.filter(item => item.classList.contains('block')).map(block => block.id));
             if (selectedBlockIds.size >= 2) {
                 svgCanvas.querySelectorAll('.arrow-group').forEach(arrow => {
                     const startId = arrow.dataset.startBlock;
                     const endId = arrow.dataset.endBlock;
-
                     if (selectedBlockIds.has(startId) && selectedBlockIds.has(endId)) {
-                        // If the arrow connects two selected blocks and isn't selected yet, select it.
                         if (!selection.includes(arrow)) {
                             selection.push(arrow);
                             arrow.classList.add('selected');
@@ -448,7 +429,6 @@
                     }
                 });
             }
-
             updateCoordinates();
             updateCustomizePanel();
         }
@@ -467,28 +447,43 @@
             
             const contentEl = document.createElement('div');
             contentEl.className = 'block-content';
-            
-            if (config.content) {
-                contentEl.textContent = config.content;
-            } else if (config.htmlContent) {
-                contentEl.innerHTML = config.htmlContent;
-            }
-
+            if (config.content) contentEl.textContent = config.content;
+            else if (config.htmlContent) contentEl.innerHTML = config.htmlContent;
             if (config.textColor) contentEl.style.color = config.textColor;
             if (config.textSize) contentEl.style.fontSize = config.textSize;
             if (config.textFont) contentEl.style.fontFamily = config.textFont;
             
             block.innerHTML = `<textarea class="block-edit"></textarea>`;
             block.prepend(contentEl);
+            
+            const editTextarea = block.querySelector('.block-edit');
+            editTextarea.style.color = contentEl.style.color;
+            editTextarea.style.fontSize = contentEl.style.fontSize;
+            editTextarea.style.fontFamily = contentEl.style.fontFamily;
+            
             grid.appendChild(block);
 
             block.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
             block.addEventListener('mousemove', (e) => handleBlockMouseMove(e, block));
+            block.addEventListener('mouseleave', () => {
+                if (!isResizing) document.body.style.cursor = 'default';
+            });
             contentEl.addEventListener('dblclick', () => startEditing(block));
-            const editTextarea = block.querySelector('.block-edit');
             editTextarea.addEventListener('keydown', (e) => handleTextEditKeyDown(e, block));
-            editTextarea.addEventListener('blur', () => finishEditing(block));
-            editTextarea.addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; });
+            
+            editTextarea.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (!customizePanel.contains(document.activeElement)) {
+                        finishEditing(block);
+                    }
+                }, 0);
+            });
+
+            editTextarea.addEventListener('input', e => { 
+                e.target.style.height = 'auto'; 
+                e.target.style.height = `${e.target.scrollHeight}px`; 
+                contentEl.textContent = e.target.value;
+            });
             
             new ResizeObserver(() => updateArrowsForBlock(block)).observe(block);
             return block;
@@ -497,18 +492,14 @@
         function addNewBlock(contentType = 'text', contentData = 'New block.') {
             const blocks = Array.from(document.querySelectorAll('.block'));
             let x, y;
-            const offset = 25; // How much to offset the new block
-            const blockWidth = 200; // Default width
-            const blockHeight = 100; // Default height
-            const gridRect = grid.getBoundingClientRect();
+            const offset = 25;
+            const blockWidth = 200;
+            const blockHeight = 100;
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
-
-            // Use the last selected block as a reference, otherwise the last created block
             const referenceBlock = (lastSelectedItem && lastSelectedItem.classList.contains('block')) ? lastSelectedItem : (blocks.length > 0 ? blocks[blocks.length - 1] : null);
 
             const placeInCenter = () => {
-                // Use context menu position if available, otherwise center of viewport
                 const gridRect = grid.getBoundingClientRect();
                 if (contextMenuX && contextMenuY) {
                     x = contextMenuX - gridRect.left;
@@ -524,12 +515,9 @@
                 const refY = parseInt(referenceBlock.style.top);
                 const potentialX = refX + offset;
                 const potentialY = refY + offset;
-
-                // Check if the potential position is within the viewport
-                // We need to account for the grid's own offset (pan)
+                const gridRect = grid.getBoundingClientRect();
                 const screenX = potentialX + gridRect.left;
                 const screenY = potentialY + gridRect.top;
-
                 if (screenX > 0 && screenX < viewportWidth - blockWidth && screenY > 0 && screenY < viewportHeight - blockHeight) {
                     x = potentialX;
                     y = potentialY;
@@ -537,31 +525,25 @@
                     placeInCenter();
                 }
             } else {
-                // If no blocks exist, place it in the center
                 placeInCenter();
             }
 
             let config = { x, y };
             switch (contentType) {
-                case 'text':
-                    config.content = contentData;
-                    break;
+                case 'text': config.content = contentData; break;
                 case 'html':
                     config.htmlContent = contentData;
-                    // Auto-resize for embedded content
                     config.width = '480px';
                     config.height = '360px';
                     break;
             }
-
             const newBlock = createBlock(config);
-            updateSelection(newBlock, false); // Select the new block
+            updateSelection(newBlock, false);
         }
 
         // --- Event Handlers ---
         function handleBlockMouseDown(e, block) {
             if (isEditing) return;
-
             const resizeHandle = getResizeHandle(e, block);
             if (resizeHandle) {
                 isResizing = true;
@@ -569,69 +551,43 @@
                 currentBlock = block;
                 startX = e.clientX;
                 startY = e.clientY;
+                document.body.style.cursor = `${resizeHandle}-resize`;
                 e.stopPropagation();
                 return;
             }
-
             if (isArrowMode || ctrlPressed) {
                 startArrow(e, block);
             } else {
-                // If shift-clicking an already selected item, flag it for potential deselection on mouseup.
-                if (e.shiftKey && selection.includes(block)) {
-                    potentialDeselectItem = block;
-                } 
-                // If clicking (no shift) an item that's part of a multi-selection, flag it to become the sole selection on mouseup.
-                else if (!e.shiftKey && selection.includes(block) && selection.length > 1) {
-                    potentialDeselectItem = block;
-                }
-                // If the block is NOT in the selection, update the selection immediately.
-                else if (!selection.includes(block)) {
-                    updateSelection(block, e.shiftKey);
-                }
-
-                // Always start the drag if the item is selected.
-                if (selection.includes(block)) {
-                    startDragging(e, block);
-                }
+                if (e.shiftKey && selection.includes(block)) potentialDeselectItem = block;
+                else if (!e.shiftKey && selection.includes(block) && selection.length > 1) potentialDeselectItem = block;
+                else if (!selection.includes(block)) updateSelection(block, e.shiftKey);
+                if (selection.includes(block)) startDragging(e, block);
             }
         }
 
         function handleBlockMouseMove(e, block) {
             if (isResizing || isDragging) return;
             const handle = getResizeHandle(e, block);
-            document.body.style.cursor = handle ? `${handle}-resize` : 'default';
+            document.body.style.cursor = handle ? `${handle}-resize` : 'move';
         }
 
         function handleMouseMove(e) {
-            if (isResizing) {
-                resizeBlock(e);
-                return;
-            }
-            if (isDragging && currentBlock) {
-                // If the mouse moves, it's a drag, so cancel any potential deselection.
+            if (!isDragging && !isResizing && !isPanning && !isDrawingArrow) return;
+            mouseMoved = true;
+            if (isResizing) resizeBlock(e);
+            else if (isDragging && currentBlock) {
                 potentialDeselectItem = null;
                 dragBlock(e);
-            } else if (isPanning) { // Panning is now independent of holding Shift
-                panGrid(e);
-            } else if (isDrawingArrow) {
-                drawArrow(e);
-            }
+            } else if (isPanning) panGrid(e);
+            else if (isDrawingArrow) drawArrow(e);
         }
 
         function handleMouseUp(e) {
-            // If an item was flagged for an action and no drag occurred, execute the action now.
             if (potentialDeselectItem) {
-                // If shift was held, it's a simple toggle to remove the item.
-                if (e.shiftKey) {
-                    updateSelection(potentialDeselectItem, true); 
-                } 
-                // Otherwise, it was a plain click, so make this the only selected item.
-                else {
-                    updateSelection(potentialDeselectItem, false);
-                }
+                if (e.shiftKey) updateSelection(potentialDeselectItem, true); 
+                else updateSelection(potentialDeselectItem, false);
                 potentialDeselectItem = null;
             }
-
             if (isDrawingArrow) endArrow(e);
             if (isDragging) stopDragging();
             if (isResizing) {
@@ -649,7 +605,6 @@
         function handleGridMouseDown(e) {
             if (e.target === grid) {
                 if (e.shiftKey) {
-                    // Start panning only if Shift is held on the empty grid
                     isPanning = true;
                     instructions.textContent = "Panning...";
                     document.body.style.cursor = 'grabbing';
@@ -671,11 +626,8 @@
         function handleContextMenuClick(e) {
             const action = e.target.dataset.action;
             if (!action) return;
-
             switch (action) {
-                case 'add-text':
-                    addNewBlock('text');
-                    break;
+                case 'add-text': addNewBlock('text'); break;
                 case 'add-image':
                     const fileInput = document.createElement('input');
                     fileInput.type = 'file';
@@ -686,11 +638,8 @@
                             const reader = new FileReader();
                             reader.onload = res => {
                                 let html;
-                                if (file.type.startsWith('image/')) {
-                                    html = `<img src="${res.target.result}" alt="User content">`;
-                                } else if (file.type.startsWith('video/')) {
-                                    html = `<video src="${res.target.result}" controls></video>`;
-                                }
+                                if (file.type.startsWith('image/')) html = `<img src="${res.target.result}" alt="User content">`;
+                                else if (file.type.startsWith('video/')) html = `<video src="${res.target.result}" controls></video>`;
                                 addNewBlock('html', html);
                             };
                             reader.readAsDataURL(file);
@@ -702,37 +651,21 @@
                     const url = prompt('Enter YouTube, Vimeo, or Google Drive video URL:');
                     if (url) {
                         let embedUrl;
-                        if (url.includes('youtube.com/watch?v=')) {
-                            const videoId = new URL(url).searchParams.get('v');
-                            embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                        } else if (url.includes('youtu.be/')) {
-                            const videoId = new URL(url).pathname.slice(1);
-                            embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                        } else if (url.includes('vimeo.com/')) {
-                            const videoId = new URL(url).pathname.slice(1);
-                            embedUrl = `https://player.vimeo.com/video/${videoId}`;
-                        } else if (url.includes('drive.google.com/file/d/')) {
+                        if (url.includes('youtube.com/watch?v=')) embedUrl = `https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`;
+                        else if (url.includes('youtu.be/')) embedUrl = `https://www.youtube.com/embed/${new URL(url).pathname.slice(1)}`;
+                        else if (url.includes('vimeo.com/')) embedUrl = `https://player.vimeo.com/video/${new URL(url).pathname.slice(1)}`;
+                        else if (url.includes('drive.google.com/file/d/')) {
                             const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-                            if (match && match[1]) {
-                                const fileId = match[1];
-                                embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-                            }
+                            if (match && match[1]) embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
                         }
-                        
-                        if (embedUrl) {
-                            addNewBlock('html', `<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`);
-                        } else {
-                            alert('Invalid or unsupported video URL.');
-                        }
+                        if (embedUrl) addNewBlock('html', `<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`);
+                        else alert('Invalid or unsupported video URL.');
                     }
                     break;
                 case 'add-desmos':
                     const desmosUrl = prompt('Enter the Desmos graph URL:');
-                    if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) {
-                        addNewBlock('html', `<iframe src="${desmosUrl}"></iframe>`);
-                    } else if (desmosUrl) {
-                        alert('Invalid Desmos URL.');
-                    }
+                    if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) addNewBlock('html', `<iframe src="${desmosUrl}"></iframe>`);
+                    else if (desmosUrl) alert('Invalid Desmos URL.');
                     break;
             }
             contextMenu.style.display = 'none';
@@ -747,11 +680,7 @@
         }
 
         function handleKeyDown(e) {
-            // If editing text, don't process any global shortcuts.
-            // The 'Escape' key is handled by a separate listener on the textarea itself.
             if (isEditing) return;
-
-            // Handle Ctrl key for arrow mode
             if (e.key === 'Control') {
                 ctrlPressed = true;
                 if (!isArrowMode) {
@@ -761,54 +690,33 @@
                     toggleArrowModeBtn.classList.add('active');
                 }
             }
-            
             if (e.key === 'Delete') {
                 selection.forEach(item => {
                     if (item.classList.contains('block')) {
                         const blockId = item.id;
-                        // Remove arrows connected to this block
-                        svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(a => a.remove());
-                        // Remove the block itself
+                        svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(a => {
+                            const markerId = a.querySelector('.arrow-line')?.getAttribute('marker-end')?.slice(5, -1);
+                            if (markerId) document.getElementById(markerId)?.remove();
+                            a.remove();
+                        });
                         item.remove();
                     } else if (item.classList.contains('arrow-group')) {
-                        // If an arrow is selected, just remove it
+                        const markerId = item.querySelector('.arrow-line')?.getAttribute('marker-end')?.slice(5, -1);
+                        if (markerId) document.getElementById(markerId)?.remove();
                         item.remove();
                     }
                 });
                 deselectAll();
             }
-            
-            // New shortcuts
             if (e.key === 'b' || e.key === 'B') {
                 e.preventDefault();
-                if (customizePanel.style.display === 'block') {
-                    customizePanel.style.display = 'none';
-                } else {
-                    customizePanel.style.display = 'block';
-                    updateCustomizePanel();
-                }
+                customizePanel.style.display = customizePanel.style.display === 'block' ? 'none' : 'block';
+                if (customizePanel.style.display === 'block') updateCustomizePanel();
             }
-            
-            if (e.shiftKey && (e.key === 'd' || e.key === 'D')) {
-                e.preventDefault();
-                addNewBlock();
-            }
-            
-            if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
-                e.preventDefault();
-                saveState();
-            }
-            
-            if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
-                e.preventDefault();
-                fileLoader.click();
-            }
-            
-            // Show shortcut help
-            if (e.key === 'h' || e.key === 'H') {
-                e.preventDefault();
-                shortcutHint.style.display = shortcutHint.style.display === 'none' ? 'block' : 'none';
-            }
+            if (e.shiftKey && (e.key === 'd' || e.key === 'D')) { e.preventDefault(); addNewBlock(); }
+            if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); saveState(); }
+            if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); fileLoader.click(); }
+            if (e.key === 'h' || e.key === 'H') { e.preventDefault(); shortcutHint.style.display = shortcutHint.style.display === 'none' ? 'block' : 'none'; }
         }
 
         function handleKeyUp(e) {
@@ -828,7 +736,6 @@
             isEditing = true;
             const contentEl = block.querySelector('.block-content');
             const textarea = block.querySelector('.block-edit');
-            
             contentEl.style.display = 'none';
             textarea.style.display = 'block';
             textarea.value = contentEl.textContent;
@@ -843,17 +750,14 @@
             isEditing = false;
             const contentEl = block.querySelector('.block-content');
             const textarea = block.querySelector('.block-edit');
-            
             contentEl.textContent = textarea.value;
             textarea.style.display = 'none';
             contentEl.style.display = 'block';
-            updateArrowsForBlock(block); // Update in case size changed
+            updateArrowsForBlock(block);
         }
 
         function handleTextEditKeyDown(e, block) {
-            if (e.key === 'Escape') {
-                finishEditing(block);
-            }
+            if (e.key === 'Escape') finishEditing(block);
         }
 
         // --- Dragging, Panning, and Arrow Drawing ---
@@ -861,13 +765,10 @@
             const rect = block.getBoundingClientRect();
             const margin = 10;
             let handle = '';
-
             if (e.clientY < rect.top + margin) handle += 'n';
             else if (e.clientY > rect.bottom - margin) handle += 's';
-
             if (e.clientX < rect.left + margin) handle += 'w';
             else if (e.clientX > rect.right - margin) handle += 'e';
-            
             return handle;
         }
 
@@ -876,23 +777,11 @@
             const rect = currentBlock.getBoundingClientRect();
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
-            let newWidth = rect.width;
-            let newHeight = rect.height;
-            let newLeft = rect.left;
-            let newTop = rect.top;
-
+            let newWidth = rect.width, newHeight = rect.height, newLeft = rect.left, newTop = rect.top;
             if (resizeDirection.includes('e')) newWidth += dx;
-            if (resizeDirection.includes('w')) {
-                newWidth -= dx;
-                newLeft += dx;
-            }
+            if (resizeDirection.includes('w')) { newWidth -= dx; newLeft += dx; }
             if (resizeDirection.includes('s')) newHeight += dy;
-            if (resizeDirection.includes('n')) {
-                newHeight -= dy;
-                newTop += dy;
-            }
-
+            if (resizeDirection.includes('n')) { newHeight -= dy; newTop += dy; }
             const minSize = 50;
             if (newWidth > minSize) {
                 currentBlock.style.width = `${newWidth}px`;
@@ -902,7 +791,6 @@
                 currentBlock.style.height = `${newHeight}px`;
                 currentBlock.style.top = `${newTop - grid.getBoundingClientRect().top}px`;
             }
-            
             startX = e.clientX;
             startY = e.clientY;
             updateArrowsForBlock(currentBlock);
@@ -913,24 +801,13 @@
             isDragging = true;
             startX = e.clientX; 
             startY = e.clientY;
-            
-            // Store initial positions for all selected blocks
-            dragInitialPositions = selection
-                .filter(item => item.classList.contains('block'))
-                .map(item => ({
-                    el: item,
-                    x: item.offsetLeft,
-                    y: item.offsetTop
-                }));
-
-            // Prevent transitions during drag for instant feedback
+            dragInitialPositions = selection.filter(item => item.classList.contains('block')).map(item => ({ el: item, x: item.offsetLeft, y: item.offsetTop }));
             dragInitialPositions.forEach(pos => pos.el.style.transition = 'none');
         }
 
         function dragBlock(e) {
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
             dragInitialPositions.forEach(pos => {
                 const newX = pos.x + dx;
                 const newY = pos.y + dy;
@@ -942,10 +819,7 @@
         }
 
         function stopDragging() { 
-            if (isDragging) {
-                // Re-enable CSS transitions
-                dragInitialPositions.forEach(pos => pos.el.style.transition = '');
-            }
+            if (isDragging) dragInitialPositions.forEach(pos => pos.el.style.transition = '');
             isDragging = false; 
             currentBlock = null; 
             dragInitialPositions = [];
@@ -968,17 +842,16 @@
         function startArrow(e, block) {
             isDrawingArrow = true; 
             arrowStartBlock = block;
+            mouseMoved = false;
             const startPoint = getBlockCenter(block);
-            
-            // Create a temporary group for drawing
             const tempGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             tempArrow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             tempArrow.setAttribute('x1', startPoint.x); 
             tempArrow.setAttribute('y1', startPoint.y);
+            tempArrow.setAttribute('x2', startPoint.x); 
+            tempArrow.setAttribute('y2', startPoint.y);
             tempArrow.setAttribute('stroke', '#3498db'); 
             tempArrow.setAttribute('stroke-width', '3');
-            tempArrow.setAttribute('marker-end', 'url(#arrowhead)');
-            
             tempGroup.appendChild(tempArrow);
             svgCanvas.appendChild(tempGroup);
         }
@@ -991,31 +864,38 @@
         }
 
         function endArrow(e) {
-            const endBlock = e.target.closest('.block');
             const tempGroup = tempArrow.parentElement;
+            if (!mouseMoved) {
+                tempGroup.remove();
+            } else {
+                const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+                const endBlock = elementUnderCursor ? elementUnderCursor.closest('.block') : null;
+                if (endBlock && endBlock !== arrowStartBlock) {
+                    const arrowExists = svgCanvas.querySelector(`.arrow-group[data-start-block="${arrowStartBlock.id}"][data-end-block="${endBlock.id}"]`);
+                    if (arrowExists) {
+                        tempGroup.remove();
+                    } else {
+                        const arrowLine = tempArrow;
+                        const color = arrowLine.getAttribute('stroke');
+                        const markerId = `arrowhead-${arrowStartBlock.id}-${endBlock.id}`;
+                        createOrUpdateMarker(markerId, color);
+                        arrowLine.setAttribute('marker-end', `url(#${markerId})`);
 
-            if (endBlock && endBlock !== arrowStartBlock) {
-                // Finalize the arrow group
-                tempGroup.classList.add('arrow-group');
-                tempGroup.setAttribute('data-start-block', arrowStartBlock.id);
-                tempGroup.setAttribute('data-end-block', endBlock.id);
-                
-                const arrowLine = tempArrow;
-                arrowLine.classList.add('arrow-line');
-
-                // Create the invisible hitbox
-                const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                hitbox.classList.add('arrow-hitbox');
-                tempGroup.appendChild(hitbox);
-
-                updateSingleArrow(tempGroup);
-
-                // If both connected blocks were selected, select the new arrow too.
-                if (selection.includes(arrowStartBlock) && selection.includes(endBlock)) {
-                    updateSelection(tempGroup, true); // true for shiftKey to add to selection
+                        tempGroup.classList.add('arrow-group');
+                        tempGroup.setAttribute('data-start-block', arrowStartBlock.id);
+                        tempGroup.setAttribute('data-end-block', endBlock.id);
+                        arrowLine.classList.add('arrow-line');
+                        const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        hitbox.classList.add('arrow-hitbox');
+                        tempGroup.appendChild(hitbox);
+                        updateSingleArrow(tempGroup);
+                        if (selection.includes(arrowStartBlock) && selection.includes(endBlock)) {
+                            updateSelection(tempGroup, true);
+                        }
+                    }
+                } else { 
+                    tempGroup.remove(); 
                 }
-            } else { 
-                tempGroup.remove(); 
             }
             isDrawingArrow = false; 
             arrowStartBlock = null; 
@@ -1023,31 +903,47 @@
         }
 
         // --- Arrow and Coordinate Updates ---
+        // Fix: New helper function to create unique markers for each arrow
+        function createOrUpdateMarker(id, color) {
+            let marker = document.getElementById(id);
+            if (!marker) {
+                marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                marker.setAttribute('id', id);
+                marker.setAttribute('markerWidth', '10');
+                marker.setAttribute('markerHeight', '7');
+                marker.setAttribute('refX', '8');
+                marker.setAttribute('refY', '3.5');
+                marker.setAttribute('orient', 'auto');
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
+                marker.appendChild(polygon);
+                svgDefs.appendChild(marker);
+            }
+            marker.querySelector('polygon').setAttribute('fill', color);
+        }
+
         function updateSingleArrow(arrowGroup) {
             const startBlock = document.getElementById(arrowGroup.dataset.startBlock);
             const endBlock = document.getElementById(arrowGroup.dataset.endBlock);
             if (!startBlock || !endBlock) return;
-
             const arrowLine = arrowGroup.querySelector('.arrow-line');
             const hitbox = arrowGroup.querySelector('.arrow-hitbox');
             if (!arrowLine || !hitbox) return;
-
             const startPoint = getClosestConnectionPoint(startBlock, endBlock);
             const endPoint = getClosestConnectionPoint(endBlock, startBlock);
-            
             [arrowLine, hitbox].forEach(el => {
                 el.setAttribute('x1', startPoint.x); 
                 el.setAttribute('y1', startPoint.y);
                 el.setAttribute('x2', endPoint.x); 
                 el.setAttribute('y2', endPoint.y);
             });
-
-            // Update arrowhead color to match arrow color
+            
+            // Fix: Update the specific marker's color to match the line
             const color = arrowLine.getAttribute('stroke') || '#3498db';
-            const marker = document.getElementById('arrowhead');
-            if (marker) {
-                const polygon = marker.querySelector('polygon');
-                if (polygon) polygon.setAttribute('fill', color);
+            const markerId = arrowLine.getAttribute('marker-end')?.slice(5, -1);
+            if (markerId) {
+                const marker = document.getElementById(markerId);
+                if (marker) marker.querySelector('polygon').setAttribute('fill', color);
             }
         }
 
@@ -1073,7 +969,8 @@
             }
         }
         
-        function editCoordinates() {
+        function editCoordinates(e) {
+            e.stopPropagation();
             const blockToEdit = lastSelectedItem && lastSelectedItem.classList.contains('block') ? lastSelectedItem : null;
             if (!blockToEdit || isEditing) return;
             const x = parseInt(blockToEdit.style.left); 
@@ -1083,15 +980,26 @@
             const inputY = document.getElementById('coord-y');
             inputX.focus(); 
             inputX.select();
-            const apply = () => {
+            const applyAndClose = () => {
                 blockToEdit.style.left = `${parseInt(inputX.value) || 0}px`;
                 blockToEdit.style.top = `${parseInt(inputY.value) || 0}px`;
                 updateArrowsForBlock(blockToEdit); 
                 updateCoordinates();
+                document.removeEventListener('click', handleClickOutside, true);
             };
+            const handleClickOutside = (e) => {
+                if (!coordsDisplay.contains(e.target)) {
+                    applyAndClose();
+                }
+            };
+            setTimeout(() => document.addEventListener('click', handleClickOutside, true), 0);
             [inputX, inputY].forEach(input => {
-                input.addEventListener('blur', apply);
-                input.addEventListener('keydown', e => e.key === 'Enter' && apply());
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyAndClose();
+                    }
+                });
             });
         }
 
@@ -1117,18 +1025,12 @@
         function updateCustomizePanel() {
             const hasBlock = selection.some(item => item.classList.contains('block'));
             const hasArrow = selection.some(item => item.classList.contains('arrow-group'));
-            
             customizeInputs.block.classList.toggle('hidden', !hasBlock);
             customizeInputs.text.classList.toggle('hidden', !hasBlock);
             customizeInputs.arrow.classList.toggle('hidden', !hasArrow);
             customizeInputs.grid.classList.toggle('hidden', hasBlock || hasArrow);
-
-            // Populate inputs based on the last selected item of each type
             if (hasBlock) {
-                const blockToSample = lastSelectedItem?.classList.contains('block') 
-                    ? lastSelectedItem 
-                    : selection.find(i => i.classList.contains('block'));
-                
+                const blockToSample = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : selection.find(i => i.classList.contains('block'));
                 if (blockToSample) {
                     const computed = getComputedStyle(blockToSample); 
                     const content = getComputedStyle(blockToSample.querySelector('.block-content'));
@@ -1136,16 +1038,12 @@
                     customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
                     customizeInputs.textColor.value = rgbToHex(content.color); 
                     customizeInputs.textSize.value = parseInt(content.fontSize);
-                    const currentFontFamily = content.fontFamily;
-                    const fontOption = Array.from(customizeInputs.textFont.options).find(opt => opt.value === currentFontFamily);
+                    const fontOption = Array.from(customizeInputs.textFont.options).find(opt => opt.value === content.fontFamily);
                     customizeInputs.textFont.value = fontOption ? fontOption.value : customizeInputs.textFont.options[0].value;
                 }
             }
             if (hasArrow) {
-                const arrowToSample = lastSelectedItem?.classList.contains('arrow-group')
-                    ? lastSelectedItem
-                    : selection.find(i => i.classList.contains('arrow-group'));
-
+                const arrowToSample = lastSelectedItem?.classList.contains('arrow-group') ? lastSelectedItem : selection.find(i => i.classList.contains('arrow-group'));
                 if (arrowToSample) {
                     const arrowLine = arrowToSample.querySelector('.arrow-line');
                     customizeInputs.arrowColor.value = rgbToHex(arrowLine.getAttribute('stroke') || '#000000');
@@ -1154,18 +1052,25 @@
             }
         }
         
+        const applyStyleToBlockText = (block, styleUpdater) => {
+            const contentEl = block.querySelector('.block-content');
+            const editEl = block.querySelector('.block-edit');
+            if (contentEl) styleUpdater(contentEl.style);
+            if (editEl) styleUpdater(editEl.style);
+        };
+
         customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
         customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
-        customizeInputs.textColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.color = e.target.value; }); });
-        customizeInputs.textSize.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontSize = `${e.target.value}px`; }); });
-        customizeInputs.textFont.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.querySelector('.block-content').style.fontFamily = e.target.value; }); });
+        customizeInputs.textColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) applyStyleToBlockText(item, style => style.color = e.target.value); }); });
+        customizeInputs.textSize.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) applyStyleToBlockText(item, style => style.fontSize = `${e.target.value}px`); }); });
+        customizeInputs.textFont.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) applyStyleToBlockText(item, style => style.fontFamily = e.target.value); }); });
         customizeInputs.arrowColor.addEventListener('input', e => { 
-            selection.forEach(item => {
-                if (item.classList.contains('arrow-group')) {
-                    item.querySelector('.arrow-line').setAttribute('stroke', e.target.value);
-                    updateSingleArrow(item);
-                }
-            });
+            selection.forEach(item => { 
+                if (item.classList.contains('arrow-group')) { 
+                    item.querySelector('.arrow-line').setAttribute('stroke', e.target.value); 
+                    updateSingleArrow(item); 
+                } 
+            }); 
         });
         customizeInputs.arrowWidth.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('arrow-group')) item.querySelector('.arrow-line').setAttribute('stroke-width', e.target.value); }); });
         customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
@@ -1179,12 +1084,9 @@
             const state = {
                 blocks: Array.from(document.querySelectorAll('.block')).map(block => {
                     const contentEl = block.querySelector('.block-content');
-                    // Check if the block contains any child elements like iframes, images, or videos.
                     const hasHtmlContent = contentEl.children.length > 0 && (contentEl.querySelector('iframe, img, video'));
-                    
                     return {
                         id: block.id,
-                        // If it has HTML content, save the innerHTML. Otherwise, save the text content.
                         content: hasHtmlContent ? null : contentEl.textContent,
                         htmlContent: hasHtmlContent ? contentEl.innerHTML : null,
                         x: parseInt(block.style.left),
@@ -1212,20 +1114,16 @@
                     gridLines: grid.style.backgroundImage,
                 }
             };
-            
-            const json = JSON.stringify(state, null, 2);
-            download('grid-state.json', json);
+            download('grid-state.json', JSON.stringify(state, null, 2));
         }
 
         function loadState(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const state = JSON.parse(e.target.result);
-                    applyState(state);
+                    applyState(JSON.parse(e.target.result));
                 } catch (err) {
                     console.error('Error parsing JSON:', err);
                     alert('Failed to load file. It may be corrupted.');
@@ -1235,48 +1133,36 @@
         }
 
         function applyState(state) {
-            // Clear existing blocks and arrows
             document.querySelectorAll('.block').forEach(block => block.remove());
-            svgCanvas.querySelectorAll('.arrow-group').forEach(arrow => arrow.remove());
+            svgCanvas.querySelectorAll('.arrow-group, marker').forEach(el => el.remove()); // Clear markers too
             deselectAll();
-            
-            // Reset grid position
-            gridX = 0;
-            gridY = 0;
+            gridX = 0; gridY = 0;
             grid.style.transform = `translate(${gridX}px, ${gridY}px)`;
-            
-            // Restore styles
             if (state.styles) {
                 if (state.styles.gridBg) document.body.style.background = state.styles.gridBg;
                 if (state.styles.gridLines) grid.style.backgroundImage = state.styles.gridLines;
             }
-
-            // Create blocks
-            if (state.blocks) {
-                state.blocks.forEach(createBlock);
-            }
-            
-            // Create arrows
+            if (state.blocks) state.blocks.forEach(createBlock);
             if (state.arrows) {
                 state.arrows.forEach(arrowData => {
                     const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                     arrowGroup.classList.add('arrow-group');
                     arrowGroup.setAttribute('data-start-block', arrowData.startBlock);
                     arrowGroup.setAttribute('data-end-block', arrowData.endBlock);
-
                     const arrowLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     arrowLine.classList.add('arrow-line');
                     arrowLine.setAttribute('stroke', arrowData.color);
                     arrowLine.setAttribute('stroke-width', arrowData.width);
-                    arrowLine.setAttribute('marker-end', 'url(#arrowhead)');
 
+                    const markerId = `arrowhead-${arrowData.startBlock}-${arrowData.endBlock}`;
+                    createOrUpdateMarker(markerId, arrowData.color);
+                    arrowLine.setAttribute('marker-end', `url(#${markerId})`);
+                    
                     const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                     hitbox.classList.add('arrow-hitbox');
-
                     arrowGroup.appendChild(arrowLine);
                     arrowGroup.appendChild(hitbox);
                     svgCanvas.appendChild(arrowGroup);
-                    
                     updateSingleArrow(arrowGroup);
                 });
             }
@@ -1286,69 +1172,34 @@
         function rgbToHex(rgb) {
             const rgbArr = rgb.match(/\d+/g);
             if (!rgbArr) return '#000000';
-            const hex = rgbArr.map(x => {
-                const hexPart = parseInt(x).toString(16);
-                return hexPart.length === 1 ? '0' + hexPart : hexPart;
-            }).join('');
+            const hex = rgbArr.map(x => ('0' + parseInt(x).toString(16)).slice(-2)).join('');
             return `#${hex}`;
         }
 
         function getBlockCenter(block) {
-            // This function now correctly calculates the center based on style properties relative to the grid.
             const x = parseInt(block.style.left);
             const y = parseInt(block.style.top);
-            return {
-                x: x + block.offsetWidth / 2,
-                y: y + block.offsetHeight / 2
-            };
+            return { x: x + block.offsetWidth / 2, y: y + block.offsetHeight / 2 };
         }
         
         function getClosestConnectionPoint(from, to) {
-            // This new logic finds the intersection point on the block's edge
-            // based on the angle between the two block centers.
             const fromCenter = getBlockCenter(from);
             const toCenter = getBlockCenter(to);
-
             const dx = toCenter.x - fromCenter.x;
             const dy = toCenter.y - fromCenter.y;
-            
             const halfW = from.offsetWidth / 2;
             const halfH = from.offsetHeight / 2;
-
-            // Handle case where blocks are at the exact same center to avoid division by zero
-            if (dx === 0 && dy === 0) {
-                return { x: fromCenter.x - halfW, y: fromCenter.y - halfH };
-            }
-
-            // Calculate the slope of the line from center to center
+            if (dx === 0 && dy === 0) return { x: fromCenter.x - halfW, y: fromCenter.y - halfH };
             const slope = dy / dx;
-
-            // Calculate the slope of the diagonals of the block (aspect ratio)
             const diagSlope = halfH / halfW;
-
             let point = { x: 0, y: 0 };
-            
-            // Determine which edge the line intersects based on the slope
             if (Math.abs(slope) < diagSlope) {
-                // Intersects with left or right side
-                if (dx > 0) { // Right side
-                    point.x = fromCenter.x + halfW;
-                    point.y = fromCenter.y + halfW * slope;
-                } else { // Left side
-                    point.x = fromCenter.x - halfW;
-                    point.y = fromCenter.y - halfW * slope;
-                }
+                if (dx > 0) { point.x = fromCenter.x + halfW; point.y = fromCenter.y + halfW * slope; }
+                else { point.x = fromCenter.x - halfW; point.y = fromCenter.y - halfW * slope; }
             } else {
-                // Intersects with top or bottom side
-                if (dy > 0) { // Bottom side
-                    point.y = fromCenter.y + halfH;
-                    point.x = fromCenter.x + halfH / slope;
-                } else { // Top side
-                    point.y = fromCenter.y - halfH;
-                    point.x = fromCenter.x - halfH / slope;
-                }
+                if (dy > 0) { point.y = fromCenter.y + halfH; point.x = fromCenter.x + halfH / slope; }
+                else { point.y = fromCenter.y - halfH; point.x = fromCenter.x - halfH / slope; }
             }
-            
             return point;
         }
         
@@ -1356,12 +1207,9 @@
             const element = document.createElement('a');
             element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(text));
             element.setAttribute('download', filename);
-
             element.style.display = 'none';
             document.body.appendChild(element);
-
             element.click();
-
             document.body.removeChild(element);
         }
     });
