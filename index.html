@@ -393,6 +393,8 @@
         let tempArrow = null;
         let ctrlPressed = false;
         let lastBlockCreationAction = () => addNewBlock('html', 'New block.'); // For Shift+D repeat
+        let savedSelectionRange = null; // To store text selection
+        let activeEditingElement = null; // To track the current contenteditable element
 
         // Show shortcut hint briefly on load
         shortcutHint.style.display = 'block';
@@ -432,6 +434,20 @@
         contextMenu.addEventListener('click', handleContextMenuClick);
         svgCanvas.addEventListener('click', handleArrowClick);
         coordsDisplay.addEventListener('click', editCoordinates);
+
+        // Listen for selection changes to keep track of the user's selection
+        document.addEventListener('selectionchange', () => {
+            if (isEditing && activeEditingElement) {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    // Ensure the selection is within the currently active editable block
+                    if (activeEditingElement.contains(range.commonAncestorContainer)) {
+                        savedSelectionRange = range.cloneRange();
+                    }
+                }
+            }
+        });
 
         toggleCustomizeBtn.addEventListener('click', () => {
             if (customizePanel.style.display === 'block') {
@@ -922,6 +938,7 @@
             // Only make text/doc content editable, not iframes
             if (contentEl && !contentEl.querySelector('iframe')) {
                 isEditing = true;
+                activeEditingElement = contentEl; // Set the active element
                 contentEl.contentEditable = true;
                 contentEl.focus();
                 // Open customize panel automatically
@@ -934,6 +951,8 @@
             const contentEl = block.querySelector('.block-content');
             if (contentEl && contentEl.isContentEditable) {
                 isEditing = false;
+                activeEditingElement = null; // Clear active element
+                savedSelectionRange = null; // Clear saved selection
                 contentEl.contentEditable = false;
                 updateArrowsForBlock(block);
             }
@@ -1231,7 +1250,7 @@
             italicBtn: document.getElementById('italic-btn'),
             underlineBtn: document.getElementById('underline-btn'),
         };
-        
+
         customizePanel.querySelector('.panel-close-btn').addEventListener('click', () => customizePanel.style.display = 'none');
         
         function updateCustomizePanel() {
@@ -1274,26 +1293,73 @@
             }
         }
         
-        // --- Customization Event Listeners ---
+        // --- Customization Event Listeners (REVISED) ---
         const formatText = (command, value = null) => {
-            document.execCommand(command, false, value);
-            // Refocus the last active editable block to ensure commands apply correctly
-            const lastBlock = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : null;
-            if(lastBlock) {
-                const contentEl = lastBlock.querySelector('.block-content');
-                if (contentEl && contentEl.isContentEditable) {
-                    contentEl.focus();
+            // If there's no active editing element or saved selection, do nothing.
+            if (!activeEditingElement || !savedSelectionRange) {
+                return;
+            }
+
+            // Restore the selection to ensure the command applies to the correct text
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(savedSelectionRange);
+
+            // Apply simple commands directly using the deprecated but functional execCommand
+            if (['bold', 'italic', 'underline'].includes(command)) {
+                document.execCommand(command, false, value);
+            } else {
+                // For other styles, wrap the selection in a <span> for better control
+                const range = savedSelectionRange;
+                if (!range.collapsed) {
+                    const span = document.createElement('span');
+                    
+                    switch (command) {
+                        case 'foreColor':
+                            span.style.color = value;
+                            break;
+                        case 'fontName':
+                            span.style.fontFamily = value;
+                            break;
+                        case 'fontSize':
+                            span.style.fontSize = `${value}px`;
+                            break;
+                    }
+                    // Wrap the selected content with the new span
+                    span.appendChild(range.extractContents());
+                    range.insertNode(span);
+                    
+                    // After applying the style, re-select the newly styled text
+                    range.selectNodeContents(span);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
                 }
             }
-        };
-        customizeInputs.boldBtn.addEventListener('mousedown', (e) => { e.preventDefault(); formatText('bold'); });
-        customizeInputs.italicBtn.addEventListener('mousedown', (e) => { e.preventDefault(); formatText('italic'); });
-        customizeInputs.underlineBtn.addEventListener('mousedown', (e) => { e.preventDefault(); formatText('underline'); });
 
+            // Save the new selection state after formatting
+            if (selection.rangeCount > 0) {
+                savedSelectionRange = selection.getRangeAt(0).cloneRange();
+            }
+        };
+
+        // For buttons that should not steal focus, use mousedown + preventDefault
+        const addFormattingButtonListener = (element, command) => {
+            element.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevents the editor from losing focus
+                formatText(command);
+            });
+        };
+
+        addFormattingButtonListener(customizeInputs.boldBtn, 'bold');
+        addFormattingButtonListener(customizeInputs.italicBtn, 'italic');
+        addFormattingButtonListener(customizeInputs.underlineBtn, 'underline');
+        
+        // For inputs, we allow them to be focused, and apply changes on 'input' or 'change'
         customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
         customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
+        
         customizeInputs.textColor.addEventListener('input', e => formatText('foreColor', e.target.value));
-        customizeInputs.textSize.addEventListener('change', e => formatText('fontSize', 7)); // This needs a mapping from px to 1-7 for execCommand
+        customizeInputs.textSize.addEventListener('change', e => formatText('fontSize', e.target.value));
         customizeInputs.textFont.addEventListener('change', e => formatText('fontName', e.target.value));
         
         customizeInputs.linkSrc.addEventListener('change', e => {
