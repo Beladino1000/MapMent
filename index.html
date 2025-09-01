@@ -416,7 +416,12 @@
                 <h4>Embed Link</h4>
                 <label><span>URL</span><input type="text" id="link-src"></label>
             </div>
-            <div id="arrow-controls" class="control-group hidden"><h4>Arrow</h4><label><span>Color</span><input type="color" id="arrow-color"></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label></div>
+            <div id="arrow-controls" class="control-group hidden">
+                <h4>Arrow</h4>
+                <label><span>Color</span><input type="color" id="arrow-color"></label>
+                <label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
+                <label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
+            </div>
             <div id="grid-controls" class="control-group"><h4>Grid</h4><label><span>Background</span><input type="color" id="grid-bg-color"></label><label><span>Line Color</span><input type="color" id="grid-line-color"></label></div>
         </div>
     </div>
@@ -448,7 +453,7 @@
         let isResizing = false;
         let isMarqueeSelecting = false;
         let resizeDirection = '';
-        let resizeInitialRect = null; // NEW: To store block dimensions at the start of a resize
+        let resizeInitialRect = null; 
         let currentBlock = null, arrowStartBlock = null;
         let selection = []; 
         let lastSelectedItem = null; 
@@ -693,6 +698,7 @@
             e.stopPropagation();
             startX = e.clientX;
             startY = e.clientY;
+            mouseMoved = false;
 
             const contentEl = block.querySelector('.block-content');
             if (isEditing && contentEl.contains(e.target)) {
@@ -719,13 +725,11 @@
             if (isArrowMode || ctrlPressed) {
                 isDrawingArrow = true;
                 arrowStartBlock = block;
-                mouseMoved = false;
                 startArrow(e, block);
                 return;
             }
             
             currentBlock = block;
-            mouseMoved = false;
 
             if (e.shiftKey) {
                 updateSelection(block, true);
@@ -735,11 +739,10 @@
         }
 
         function handleMouseMove(e) {
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-
-            const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-            if (dist > 3) mouseMoved = true;
+            if (!mouseMoved && (isDrawingArrow || currentBlock)) {
+                const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+                if (dist > 3) mouseMoved = true;
+            }
 
             if (currentBlock && !isDragging && !isResizing && !isPanning && !isDrawingArrow && mouseMoved) {
                 isDragging = true;
@@ -984,14 +987,24 @@
                     if (item.classList.contains('block')) {
                         const blockId = item.id;
                         svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(a => {
-                            const markerId = a.querySelector('.arrow-line')?.getAttribute('marker-end')?.slice(5, -1);
-                            if (markerId) document.getElementById(markerId)?.remove();
+                            const arrowLine = a.querySelector('.arrow-line');
+                            if (arrowLine) {
+                                const endMarkerUrl = arrowLine.getAttribute('marker-end');
+                                if (endMarkerUrl) document.getElementById(endMarkerUrl.slice(5, -1))?.remove();
+                                const startMarkerUrl = arrowLine.getAttribute('marker-start');
+                                if (startMarkerUrl) document.getElementById(startMarkerUrl.slice(5, -1))?.remove();
+                            }
                             a.remove();
                         });
                         item.remove();
                     } else if (item.classList.contains('arrow-group')) {
-                        const markerId = item.querySelector('.arrow-line')?.getAttribute('marker-end')?.slice(5, -1);
-                        if (markerId) document.getElementById(markerId)?.remove();
+                        const arrowLine = item.querySelector('.arrow-line');
+                        if (arrowLine) {
+                            const endMarkerUrl = arrowLine.getAttribute('marker-end');
+                            if (endMarkerUrl) document.getElementById(endMarkerUrl.slice(5, -1))?.remove();
+                            const startMarkerUrl = arrowLine.getAttribute('marker-start');
+                            if (startMarkerUrl) document.getElementById(startMarkerUrl.slice(5, -1))?.remove();
+                        }
                         item.remove();
                     }
                 });
@@ -1189,7 +1202,8 @@
             tempArrow.setAttribute('stroke', '#3498db'); 
             tempArrow.setAttribute('stroke-width', '3');
 
-            createOrUpdateMarker('temp-arrowhead', '#3498db');
+            const marker = createOrUpdateMarker('temp-arrowhead', '#3498db', 10);
+            marker.setAttribute('orient', 'auto');
             tempArrow.setAttribute('marker-end', 'url(#temp-arrowhead)');
 
             tempGroup.appendChild(tempArrow);
@@ -1207,36 +1221,63 @@
             const tempGroup = tempArrow.parentElement;
             if (!mouseMoved) {
                 tempGroup?.remove();
-            } else {
-                const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
-                const endBlock = elementUnderCursor ? elementUnderCursor.closest('.block') : null;
-                if (endBlock && endBlock !== arrowStartBlock) {
-                    const arrowExists = svgCanvas.querySelector(`.arrow-group[data-start-block="${arrowStartBlock.id}"][data-end-block="${endBlock.id}"]`);
-                    if (arrowExists) {
-                        tempGroup?.remove();
-                    } else {
-                        const arrowLine = tempArrow;
-                        const color = arrowLine.getAttribute('stroke');
-                        const markerId = `arrowhead-${arrowStartBlock.id}-${endBlock.id}`;
-                        createOrUpdateMarker(markerId, color);
-                        arrowLine.setAttribute('marker-end', `url(#${markerId})`);
-
-                        tempGroup.classList.add('arrow-group');
-                        tempGroup.setAttribute('data-start-block', arrowStartBlock.id);
-                        tempGroup.setAttribute('data-end-block', endBlock.id);
-                        arrowLine.classList.add('arrow-line');
-                        const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        hitbox.classList.add('arrow-hitbox');
-                        tempGroup.appendChild(hitbox);
-                        updateSingleArrow(tempGroup);
-                        if (selection.includes(arrowStartBlock) && selection.includes(endBlock)) {
-                            updateSelection(tempGroup, true);
-                        }
-                    }
-                } else { 
-                    tempGroup?.remove(); 
-                }
+                document.getElementById('temp-arrowhead')?.remove();
+                tempArrow = null;
+                return;
             }
+
+            const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+            const endBlock = elementUnderCursor ? elementUnderCursor.closest('.block') : null;
+
+            const reverseArrow = endBlock ? svgCanvas.querySelector(`.arrow-group[data-start-block="${endBlock.id}"][data-end-block="${arrowStartBlock.id}"]`) : null;
+
+            if (reverseArrow) {
+                // Make existing arrow bidirectional
+                const reverseLine = reverseArrow.querySelector('.arrow-line');
+                const color = reverseLine.getAttribute('stroke');
+                const headSize = parseFloat(reverseArrow.dataset.headSize) || 10;
+                
+                const startMarkerId = `arrowhead-start-${endBlock.id}-${arrowStartBlock.id}`;
+                const marker = createOrUpdateMarker(startMarkerId, color, headSize);
+                marker.setAttribute('orient', 'auto-start-reverse');
+                
+                reverseLine.setAttribute('marker-start', `url(#${startMarkerId})`);
+                reverseArrow.dataset.bidirectional = 'true';
+                
+                tempGroup?.remove(); // Clean up the temporary arrow
+
+            } else if (endBlock && endBlock !== arrowStartBlock) {
+                const arrowExists = svgCanvas.querySelector(`.arrow-group[data-start-block="${arrowStartBlock.id}"][data-end-block="${endBlock.id}"]`);
+                if (arrowExists) {
+                    tempGroup?.remove();
+                } else {
+                    const arrowLine = tempArrow;
+                    const color = arrowLine.getAttribute('stroke');
+                    const headSize = 10;
+                    
+                    const markerId = `arrowhead-end-${arrowStartBlock.id}-${endBlock.id}`;
+                    const marker = createOrUpdateMarker(markerId, color, headSize);
+                    marker.setAttribute('orient', 'auto');
+                    arrowLine.setAttribute('marker-end', `url(#${markerId})`);
+
+                    tempGroup.classList.add('arrow-group');
+                    tempGroup.dataset.startBlock = arrowStartBlock.id;
+                    tempGroup.dataset.endBlock = endBlock.id;
+                    tempGroup.dataset.headSize = headSize;
+                    
+                    arrowLine.classList.add('arrow-line');
+                    const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    hitbox.classList.add('arrow-hitbox');
+                    tempGroup.appendChild(hitbox);
+                    updateSingleArrow(tempGroup);
+                    if (selection.includes(arrowStartBlock) && selection.includes(endBlock)) {
+                        updateSelection(tempGroup, true);
+                    }
+                }
+            } else { 
+                tempGroup?.remove(); 
+            }
+            
             document.getElementById('temp-arrowhead')?.remove();
             tempArrow = null;
         }
@@ -1279,22 +1320,27 @@
         }
 
         // --- Arrow and Coordinate Updates ---
-        function createOrUpdateMarker(id, color) {
+        function createOrUpdateMarker(id, color, size = 10) {
             let marker = document.getElementById(id);
             if (!marker) {
                 marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
                 marker.setAttribute('id', id);
-                marker.setAttribute('markerWidth', '10');
-                marker.setAttribute('markerHeight', '7');
-                marker.setAttribute('refX', '8');
-                marker.setAttribute('refY', '3.5');
-                marker.setAttribute('orient', 'auto');
                 const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
                 marker.appendChild(polygon);
                 svgDefs.appendChild(marker);
             }
-            marker.querySelector('polygon').setAttribute('fill', color);
+            const width = Number(size);
+            const height = width * 0.7;
+            
+            marker.setAttribute('markerWidth', width);
+            marker.setAttribute('markerHeight', height);
+            marker.setAttribute('refX', width * 0.9);
+            marker.setAttribute('refY', height / 2);
+            
+            const polygon = marker.querySelector('polygon');
+            polygon.setAttribute('points', `0 0, ${width} ${height / 2}, 0 ${height}`);
+            polygon.setAttribute('fill', color);
+            return marker;
         }
 
         function updateSingleArrow(arrowGroup) {
@@ -1316,10 +1362,17 @@
             });
             
             const color = arrowLine.getAttribute('stroke') || '#3498db';
-            const markerId = arrowLine.getAttribute('marker-end')?.slice(5, -1);
-            if (markerId) {
-                const marker = document.getElementById(markerId);
-                if (marker) marker.querySelector('polygon').setAttribute('fill', color);
+            const headSize = arrowGroup.dataset.headSize || 10;
+            
+            const endMarkerUrl = arrowLine.getAttribute('marker-end');
+            if (endMarkerUrl) {
+                const markerId = endMarkerUrl.slice(5, -1);
+                createOrUpdateMarker(markerId, color, headSize);
+            }
+            const startMarkerUrl = arrowLine.getAttribute('marker-start');
+            if (startMarkerUrl) {
+                const markerId = startMarkerUrl.slice(5, -1);
+                createOrUpdateMarker(markerId, color, headSize);
             }
         }
 
@@ -1401,6 +1454,7 @@
             linkSrc: document.getElementById('link-src'),
             arrowColor: document.getElementById('arrow-color'), 
             arrowWidth: document.getElementById('arrow-width'),
+            arrowHeadSize: document.getElementById('arrow-head-size'),
             gridBg: document.getElementById('grid-bg-color'), 
             gridLines: document.getElementById('grid-line-color'),
             boldBtn: document.getElementById('bold-btn'),
@@ -1450,6 +1504,7 @@
                     const arrowLine = arrowToSample.querySelector('.arrow-line');
                     customizeInputs.arrowColor.value = rgbToHex(arrowLine.getAttribute('stroke') || '#000000');
                     customizeInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
+                    customizeInputs.arrowHeadSize.value = arrowToSample.dataset.headSize || 10;
                 }
             }
         }
@@ -1518,6 +1573,15 @@
             }); 
         });
         customizeInputs.arrowWidth.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('arrow-group')) item.querySelector('.arrow-line').setAttribute('stroke-width', e.target.value); }); });
+        customizeInputs.arrowHeadSize.addEventListener('input', e => {
+            const newSize = parseFloat(e.target.value);
+            selection.forEach(item => {
+                if (item.classList.contains('arrow-group')) {
+                    item.dataset.headSize = newSize; // Store new size
+                    updateSingleArrow(item); // Redraw arrow and its markers
+                }
+            });
+        });
         customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
         customizeInputs.gridLines.addEventListener('input', e => {
             const color = e.target.value;
@@ -1545,10 +1609,12 @@
                 arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(arrowGroup => {
                     const arrowLine = arrowGroup.querySelector('.arrow-line');
                     return {
-                        startBlock: arrowGroup.getAttribute('data-start-block'),
-                        endBlock: arrowGroup.getAttribute('data-end-block'),
+                        startBlock: arrowGroup.dataset.startBlock,
+                        endBlock: arrowGroup.dataset.endBlock,
                         color: arrowLine.getAttribute('stroke'),
                         width: arrowLine.getAttribute('stroke-width'),
+                        headSize: arrowGroup.dataset.headSize,
+                        bidirectional: arrowGroup.dataset.bidirectional === 'true',
                     };
                 }),
                 styles: {
@@ -1577,7 +1643,8 @@
 
         function applyState(state) {
             document.querySelectorAll('.block').forEach(block => block.remove());
-            svgCanvas.querySelectorAll('.arrow-group, marker').forEach(el => el.remove());
+            svgCanvas.querySelectorAll('.arrow-group').forEach(el => el.remove());
+            svgDefs.innerHTML = ''; // Clear all markers
             deselectAll();
             gridX = 0; gridY = 0; scale = 1;
 
@@ -1595,25 +1662,10 @@
             if (state.blocks) state.blocks.forEach(createBlock);
             if (state.arrows) {
                 state.arrows.forEach(arrowData => {
-                    const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                    arrowGroup.classList.add('arrow-group');
-                    arrowGroup.setAttribute('data-start-block', arrowData.startBlock);
-                    arrowGroup.setAttribute('data-end-block', arrowData.endBlock);
-                    const arrowLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    arrowLine.classList.add('arrow-line');
-                    arrowLine.setAttribute('stroke', arrowData.color);
-                    arrowLine.setAttribute('stroke-width', arrowData.width);
-
-                    const markerId = `arrowhead-${arrowData.startBlock}-${arrowData.endBlock}`;
-                    createOrUpdateMarker(markerId, arrowData.color);
-                    arrowLine.setAttribute('marker-end', `url(#${markerId})`);
-                    
-                    const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    hitbox.classList.add('arrow-hitbox');
-                    arrowGroup.appendChild(arrowLine);
-                    arrowGroup.appendChild(hitbox);
-                    svgCanvas.appendChild(arrowGroup);
-                    updateSingleArrow(arrowGroup);
+                    const startBlock = document.getElementById(arrowData.startBlock);
+                    const endBlock = document.getElementById(arrowData.endBlock);
+                    if (!startBlock || !endBlock) return;
+                    createArrow(arrowData);
                 });
             }
         }
@@ -1653,6 +1705,8 @@
                         endBlock: idMap.get(endId),
                         color: arrowLine.getAttribute('stroke'),
                         width: arrowLine.getAttribute('stroke-width'),
+                        headSize: arrow.dataset.headSize,
+                        bidirectional: arrow.dataset.bidirectional === 'true',
                     };
                     const newArrowGroup = createArrow(newArrowData);
                     newSelection.push(newArrowGroup);
@@ -1666,15 +1720,29 @@
         function createArrow(arrowData) {
             const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             arrowGroup.classList.add('arrow-group');
-            arrowGroup.setAttribute('data-start-block', arrowData.startBlock);
-            arrowGroup.setAttribute('data-end-block', arrowData.endBlock);
+            arrowGroup.dataset.startBlock = arrowData.startBlock;
+            arrowGroup.dataset.endBlock = arrowData.endBlock;
+            const headSize = arrowData.headSize || 10;
+            arrowGroup.dataset.headSize = headSize;
+            
             const arrowLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             arrowLine.classList.add('arrow-line');
             arrowLine.setAttribute('stroke', arrowData.color);
             arrowLine.setAttribute('stroke-width', arrowData.width);
-            const markerId = `arrowhead-${arrowData.startBlock}-${arrowData.endBlock}`;
-            createOrUpdateMarker(markerId, arrowData.color);
-            arrowLine.setAttribute('marker-end', `url(#${markerId})`);
+
+            const endMarkerId = `arrowhead-end-${arrowData.startBlock}-${arrowData.endBlock}`;
+            let marker = createOrUpdateMarker(endMarkerId, arrowData.color, headSize);
+            marker.setAttribute('orient', 'auto');
+            arrowLine.setAttribute('marker-end', `url(#${endMarkerId})`);
+
+            if (arrowData.bidirectional) {
+                arrowGroup.dataset.bidirectional = 'true';
+                const startMarkerId = `arrowhead-start-${arrowData.startBlock}-${arrowData.endBlock}`;
+                marker = createOrUpdateMarker(startMarkerId, arrowData.color, headSize);
+                marker.setAttribute('orient', 'auto-start-reverse');
+                arrowLine.setAttribute('marker-start', `url(#${startMarkerId})`);
+            }
+            
             const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             hitbox.classList.add('arrow-hitbox');
             arrowGroup.appendChild(arrowLine);
