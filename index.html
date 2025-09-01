@@ -209,6 +209,61 @@
         .control-btn.active { background: #e74c3c; }
         .control-btn:hover { background: #3498db; transform: translateY(-2px); }
         .btn-icon { font-size: 16px; }
+        
+        /* --- New Page Controls CSS --- */
+        .page-controls {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(40, 40, 40, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px 10px;
+            border-radius: 25px;
+            z-index: 1001;
+        }
+
+        .page-btn {
+            background: #555;
+            color: white;
+            border: 1px solid #777;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .page-btn:hover {
+            background-color: #3498db;
+            transform: scale(1.1);
+        }
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            background-color: #555;
+        }
+        #page-display {
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 10px;
+            border-radius: 15px;
+            min-width: 80px;
+            text-align: center;
+            margin: 5px 0;
+        }
+        /* --- End of New CSS --- */
 
         #customize-panel {
             display: none;
@@ -377,7 +432,18 @@
     <div class="instructions" id="instructions">Hold Shift or Middle-Click to pan | Scroll to Zoom</div>
     
     <div class="shortcut-hint" id="shortcut-hint" style="display: none;">
-        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br>Pressione <kbd>SHIFT D</kbd> para adicionar um bloco<br>Segure <kbd>Ctrl</kbd> e ligue dois blocos para adicionar uma seta<br>Pressione <kbd>B</kbd> para abrir/fechar o menu de customização<br>Pressione <kbd>Ctrl S</kbd> para salvar o mapa mental<br>Pressione <kbd>Ctrl L</kbd> para carregar um mapa mental</div>
+        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br>
+        <kbd>←</kbd> / <kbd>→</kbd> ou <kbd>PgUp</kbd> / <kbd>PgDn</kbd> para mudar de slide<br>
+        Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa<br>
+        Use o <kbd>Scroll</kbd> para dar zoom<br>
+        Pressione <kbd>Shift</kbd> + <kbd>A</kbd> para abrir menu de adição<br>
+        Pressione <kbd>Shift</kbd> + <kbd>D</kbd> para duplicar/adicionar bloco<br>
+        Segure <kbd>Ctrl</kbd> para criar setas entre blocos<br>
+        Pressione <kbd>Delete</kbd> para apagar itens selecionados<br>
+        Pressione <kbd>B</kbd> para abrir/fechar o painel de customização<br>
+        Pressione <kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar<br>
+        Pressione <kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar
+    </div>
 
     <div class="control-panel">
         <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Adicionar conteúdo</span></button>
@@ -385,6 +451,14 @@
         <button class="control-btn" id="toggle-customize-btn"><span class="btn-icon">🎨</span><span>Customizar</span></button>
         <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Salvar</span></button>
         <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Carregar</span></button>
+    </div>
+
+    <div class="page-controls">
+        <button class="page-btn" id="prev-page-btn" title="Previous Page (Page Up / ←)">▲</button>
+        <span id="page-display">Page 1 / 1</span>
+        <button class="page-btn" id="next-page-btn" title="Next Page (Page Down / →)">▼</button>
+        <button class="page-btn" id="add-page-btn" title="Add New Page">+</button>
+        <button class="page-btn" id="delete-page-btn" title="Delete Current Page">🗑️</button>
     </div>
 
     <div id="context-menu">
@@ -429,7 +503,7 @@
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
 <script src="https://unpkg.com/mammoth@1.5.1/mammoth.browser.min.js"></script>
-    <script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
         // --- Element References ---
         const container = document.getElementById('container');
@@ -447,6 +521,12 @@
         const customizePanel = document.getElementById('customize-panel');
         const shortcutHint = document.getElementById('shortcut-hint');
         const contextMenu = document.getElementById('context-menu');
+        // Page Controls References
+        const prevPageBtn = document.getElementById('prev-page-btn');
+        const nextPageBtn = document.getElementById('next-page-btn');
+        const addPageBtn = document.getElementById('add-page-btn');
+        const deletePageBtn = document.getElementById('delete-page-btn');
+        const pageDisplay = document.getElementById('page-display');
     
         // --- State Variables ---
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
@@ -468,6 +548,10 @@
         let savedSelectionRange = null; 
         let activeEditingElement = null; 
         let marqueeBox = null, marqueeStartX = 0, marqueeStartY = 0;
+        
+        // --- Page State Variables ---
+        let pages = [];
+        let currentPageIndex = 0;
 
         // Show shortcut hint briefly on load
         shortcutHint.style.display = 'block';
@@ -476,11 +560,25 @@
         }, 30000);
 
         // --- Initial Setup ---
-        createBlock({ x: 540, y: 300, htmlContent: "MentMap: Faça seus materiais para apresentação e mapas mentais." });
-        createBlock({ x: 1140, y: 300, htmlContent: "É extremamente fácil fazê-los" });
-        updateGridTransform();
-        updateCoordinates();
-
+        function initialize() {
+            const initialPage = {
+                 blocks: [
+                    { x: 540, y: 300, htmlContent: "MentMap: Faça seus materiais para apresentação e mapas mentais.", id: 'block-0' },
+                    { x: 1140, y: 300, htmlContent: "É extremamente fácil fazê-los", id: 'block-1' }
+                ],
+                arrows: [],
+                viewport: { gridX: 0, gridY: 0, scale: 1 },
+                styles: { 
+                    gridBg: 'linear-gradient(135deg, rgb(15, 32, 39), rgb(32, 58, 67), rgb(44, 83, 100))',
+                    gridLines: 'linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)'
+                }
+            };
+            blockCounter = 2;
+            pages = [initialPage];
+            currentPageIndex = 0;
+            loadPage(0, true); // First load, no need to save state
+        }
+        
         // --- Event Listeners ---
         addContentBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
@@ -495,9 +593,9 @@
             contextMenu.style.top = `${rect.top - menuHeight - 10}px`;
         });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
-        saveBtn.addEventListener('click', saveState);
+        saveBtn.addEventListener('click', saveAllPages);
         loadBtn.addEventListener('click', () => fileLoader.click());
-        fileLoader.addEventListener('change', loadState);
+        fileLoader.addEventListener('change', loadAllPages);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('keydown', handleKeyDown);
@@ -514,6 +612,13 @@
         contextMenu.addEventListener('click', handleContextMenuClick);
         svgCanvas.addEventListener('click', handleArrowClick);
         coordsDisplay.addEventListener('click', editCoordinates);
+
+        // Page Control Listeners
+        prevPageBtn.addEventListener('click', goToPrevPage);
+        nextPageBtn.addEventListener('click', goToNextPage);
+        addPageBtn.addEventListener('click', addNewPage);
+        deletePageBtn.addEventListener('click', deleteCurrentPage);
+
 
         document.addEventListener('selectionchange', () => {
             if (isEditing && activeEditingElement) {
@@ -687,7 +792,6 @@
 
         // --- Event Handlers ---
         function handleBlockDblClick(e, block) {
-            // Prevent editing when double clicking on interactive content like links or iframes
             if (e.target.closest('a, button, input, iframe, video')) {
                 return;
             }
@@ -739,6 +843,9 @@
         }
 
         function handleMouseMove(e) {
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+
             if (!mouseMoved && (isDrawingArrow || currentBlock)) {
                 const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
                 if (dist > 3) mouseMoved = true;
@@ -973,6 +1080,16 @@
 
         function handleKeyDown(e) {
             if (isEditing) return;
+            
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+                e.preventDefault();
+                goToNextPage();
+            }
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                e.preventDefault();
+                goToPrevPage();
+            }
+
             if (e.key === 'Control') {
                 ctrlPressed = true;
                 if (!isArrowMode) {
@@ -1028,7 +1145,7 @@
                 contextMenu.style.top = `${lastMouseY}px`;
                 contextMenu.style.display = 'block';
             }
-            if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); saveState(); }
+            if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); saveAllPages(); }
             if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); fileLoader.click(); }
             if (e.key === 'h' || e.key === 'H') { e.preventDefault(); shortcutHint.style.display = shortcutHint.style.display === 'none' ? 'block' : 'none'; }
         }
@@ -1045,7 +1162,6 @@
             }
         }
 
-        // --- Text Editing (Rich Text) ---
         function startEditing(block, e) {
             if (e && e.target.closest('a, button, input')) return;
             const contentEl = block.querySelector('.block-content');
@@ -1071,8 +1187,6 @@
                 updateArrowsForBlock(block);
             }
         }
-
-        // --- Dragging, Panning, Resizing, and Arrow Drawing ---
         
         function resizeBlock(e) {
             if (!isResizing || !currentBlock || !resizeInitialRect) return;
@@ -1085,16 +1199,12 @@
             let newLeft = resizeInitialRect.left;
             let newTop = resizeInitialRect.top;
 
-            if (resizeDirection.includes('e')) {
-                newWidth = resizeInitialRect.width + dx;
-            }
+            if (resizeDirection.includes('e')) newWidth = resizeInitialRect.width + dx;
             if (resizeDirection.includes('w')) {
                 newWidth = resizeInitialRect.width - dx;
                 newLeft = resizeInitialRect.left + dx;
             }
-            if (resizeDirection.includes('s')) {
-                newHeight = resizeInitialRect.height + dy;
-            }
+            if (resizeDirection.includes('s')) newHeight = resizeInitialRect.height + dy;
             if (resizeDirection.includes('n')) {
                 newHeight = resizeInitialRect.height - dy;
                 newTop = resizeInitialRect.top + dy;
@@ -1139,12 +1249,8 @@
                 }
             });
 
-            if (maxRight > window.innerWidth - expansionBuffer) {
-                grid.style.width = `${grid.offsetWidth + expansionAmount}px`;
-            }
-            if (maxBottom > window.innerHeight - expansionBuffer) {
-                grid.style.height = `${grid.offsetHeight + expansionAmount}px`;
-            }
+            if (maxRight > window.innerWidth - expansionBuffer) grid.style.width = `${grid.offsetWidth + expansionAmount}px`;
+            if (maxBottom > window.innerHeight - expansionBuffer) grid.style.height = `${grid.offsetHeight + expansionAmount}px`;
 
             updateCoordinates();
         }
@@ -1160,12 +1266,8 @@
             const scaleAmount = 0.05;
             let mousePoint = screenToGridCoords(e.clientX, e.clientY);
             
-            if (gridX === 0) {
-                mousePoint.x = 0;
-            }
-            if (gridY === 0) {
-                mousePoint.y = 0;
-            }
+            if (gridX === 0) mousePoint.x = 0;
+            if (gridY === 0) mousePoint.y = 0;
             
             const oldScale = scale;
             if (e.deltaY < 0) scale += scaleAmount;
@@ -1232,7 +1334,6 @@
             const reverseArrow = endBlock ? svgCanvas.querySelector(`.arrow-group[data-start-block="${endBlock.id}"][data-end-block="${arrowStartBlock.id}"]`) : null;
 
             if (reverseArrow) {
-                // Make existing arrow bidirectional
                 const reverseLine = reverseArrow.querySelector('.arrow-line');
                 const color = reverseLine.getAttribute('stroke');
                 const headSize = parseFloat(reverseArrow.dataset.headSize) || 10;
@@ -1244,7 +1345,7 @@
                 reverseLine.setAttribute('marker-start', `url(#${startMarkerId})`);
                 reverseArrow.dataset.bidirectional = 'true';
                 
-                tempGroup?.remove(); // Clean up the temporary arrow
+                tempGroup?.remove();
 
             } else if (endBlock && endBlock !== arrowStartBlock) {
                 const arrowExists = svgCanvas.querySelector(`.arrow-group[data-start-block="${arrowStartBlock.id}"][data-end-block="${endBlock.id}"]`);
@@ -1319,7 +1420,6 @@
             updateUIState();
         }
 
-        // --- Arrow and Coordinate Updates ---
         function createOrUpdateMarker(id, color, size = 10) {
             let marker = document.getElementById(id);
             if (!marker) {
@@ -1366,13 +1466,11 @@
             
             const endMarkerUrl = arrowLine.getAttribute('marker-end');
             if (endMarkerUrl) {
-                const markerId = endMarkerUrl.slice(5, -1);
-                createOrUpdateMarker(markerId, color, headSize);
+                createOrUpdateMarker(endMarkerUrl.slice(5, -1), color, headSize);
             }
             const startMarkerUrl = arrowLine.getAttribute('marker-start');
             if (startMarkerUrl) {
-                const markerId = startMarkerUrl.slice(5, -1);
-                createOrUpdateMarker(markerId, color, headSize);
+                createOrUpdateMarker(startMarkerUrl.slice(5, -1), color, headSize);
             }
         }
 
@@ -1403,7 +1501,7 @@
         
         function editCoordinates(e) {
             e.stopPropagation();
-            const blockToEdit = lastSelectedItem && lastSelectedItem.classList.contains('block') ? lastSelectedItem : null;
+            const blockToEdit = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : null;
             if (!blockToEdit || isEditing) return;
             const x = parseInt(blockToEdit.style.left); 
             const y = parseInt(blockToEdit.style.top);
@@ -1421,9 +1519,7 @@
                 document.removeEventListener('click', handleClickOutside, true);
             };
             const handleClickOutside = (e) => {
-                if (!coordsDisplay.contains(e.target)) {
-                    applyAndClose();
-                }
+                if (!coordsDisplay.contains(e.target)) applyAndClose();
             };
             setTimeout(() => document.addEventListener('click', handleClickOutside, true), 0);
             [inputX, inputY].forEach(input => {
@@ -1436,7 +1532,6 @@
             });
         }
 
-        // --- Customization Panel ---
         const customizeInputs = {
             block: document.getElementById('block-controls'), 
             handle: document.getElementById('handle-controls'),
@@ -1468,7 +1563,7 @@
             const hasBlock = selection.some(item => item.classList.contains('block'));
             const hasArrow = selection.some(item => item.classList.contains('arrow-group'));
             const lastSelectedBlock = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : selection.find(i => i.classList.contains('block'));
-            const hasIframe = lastSelectedBlock && lastSelectedBlock.querySelector('iframe');
+            const hasIframe = lastSelectedBlock?.querySelector('iframe');
             
             customizeInputs.block.classList.toggle('hidden', !hasBlock);
             customizeInputs.handle.classList.toggle('hidden', !hasBlock);
@@ -1520,11 +1615,10 @@
                 const range = savedSelectionRange;
                 if (!range.collapsed) {
                     const span = document.createElement('span');
-                    switch (command) {
-                        case 'foreColor': span.style.color = value; break;
-                        case 'fontName': span.style.fontFamily = value; break;
-                        case 'fontSize': span.style.fontSize = `${value}px`; break;
-                    }
+                    if(command === 'foreColor') span.style.color = value;
+                    if(command === 'fontName') span.style.fontFamily = value;
+                    if(command === 'fontSize') span.style.fontSize = `${value}px`;
+                    
                     span.appendChild(range.extractContents());
                     range.insertNode(span);
                     range.selectNodeContents(span);
@@ -1532,9 +1626,7 @@
                     selection.addRange(range);
                 }
             }
-            if (selection.rangeCount > 0) {
-                savedSelectionRange = selection.getRangeAt(0).cloneRange();
-            }
+            if (selection.rangeCount > 0) savedSelectionRange = selection.getRangeAt(0).cloneRange();
         };
 
         const addFormattingButtonListener = (element, command) => {
@@ -1577,8 +1669,8 @@
             const newSize = parseFloat(e.target.value);
             selection.forEach(item => {
                 if (item.classList.contains('arrow-group')) {
-                    item.dataset.headSize = newSize; // Store new size
-                    updateSingleArrow(item); // Redraw arrow and its markers
+                    item.dataset.headSize = newSize;
+                    updateSingleArrow(item);
                 }
             });
         });
@@ -1588,24 +1680,22 @@
             grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`;
         });
         
-        // --- Save & Load Logic ---
-        function saveState() {
-            const state = {
-                blocks: Array.from(document.querySelectorAll('.block')).map(block => {
-                    const contentEl = block.querySelector('.block-content');
-                    return {
-                        id: block.id,
-                        htmlContent: contentEl.innerHTML,
-                        x: parseInt(block.style.left),
-                        y: parseInt(block.style.top),
-                        width: block.style.width,
-                        height: block.style.height,
-                        bgColor: block.style.backgroundColor,
-                        borderColor: block.style.borderColor,
-                        handleColor: block.style.getPropertyValue('--handle-color'),
-                        handleDisplay: block.style.getPropertyValue('--handle-display'),
-                    };
-                }),
+        // --- Page Management Logic ---
+        function saveCurrentPageState() {
+            if (pages.length === 0) return;
+            pages[currentPageIndex] = {
+                blocks: Array.from(document.querySelectorAll('.block')).map(block => ({
+                    id: block.id,
+                    htmlContent: block.querySelector('.block-content').innerHTML,
+                    x: parseInt(block.style.left),
+                    y: parseInt(block.style.top),
+                    width: block.style.width,
+                    height: block.style.height,
+                    bgColor: block.style.backgroundColor,
+                    borderColor: block.style.borderColor,
+                    handleColor: block.style.getPropertyValue('--handle-color'),
+                    handleDisplay: block.style.getPropertyValue('--handle-display'),
+                })),
                 arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(arrowGroup => {
                     const arrowLine = arrowGroup.querySelector('.arrow-line');
                     return {
@@ -1623,54 +1713,135 @@
                 },
                 viewport: { gridX, gridY, scale }
             };
-            download('grid-state.json', JSON.stringify(state, null, 2));
         }
 
-        function loadState(event) {
+        function loadPage(index, isFirstLoad = false) {
+            if (!isFirstLoad) {
+                saveCurrentPageState();
+            }
+            if (index < 0 || index >= pages.length) return;
+
+            currentPageIndex = index;
+            const pageState = pages[currentPageIndex];
+            applyPageState(pageState);
+            updatePageUI();
+        }
+
+        function applyPageState(state) {
+            document.querySelectorAll('.block').forEach(b => b.remove());
+            svgCanvas.querySelectorAll('.arrow-group').forEach(ag => ag.remove());
+            svgDefs.innerHTML = '';
+            deselectAll();
+            
+            gridX = state.viewport?.gridX || 0;
+            gridY = state.viewport?.gridY || 0;
+            scale = state.viewport?.scale || 1;
+            updateGridTransform();
+
+            document.body.style.background = state.styles?.gridBg || 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)';
+            grid.style.backgroundImage = state.styles?.gridLines || `linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`;
+            
+            let maxId = 0;
+            if (state.blocks && Array.isArray(state.blocks)) {
+                state.blocks.forEach(b => {
+                    if (b && b.id) {
+                        const idNum = parseInt(b.id.split('-')[1]);
+                        if (!isNaN(idNum) && idNum > maxId) maxId = idNum;
+                    }
+                });
+            }
+            blockCounter = maxId + 1;
+
+            if (state.blocks && Array.isArray(state.blocks)) {
+                state.blocks.forEach(blockConfig => {
+                    if(blockConfig) createBlock(blockConfig);
+                });
+            }
+            if (state.arrows && Array.isArray(state.arrows)) {
+                state.arrows.forEach(arrowData => {
+                    if(arrowData) {
+                        const startBlock = document.getElementById(arrowData.startBlock);
+                        const endBlock = document.getElementById(arrowData.endBlock);
+                        if (startBlock && endBlock) createArrow(arrowData);
+                    }
+                });
+            }
+        }
+        
+        function updatePageUI() {
+            pageDisplay.textContent = `Page ${currentPageIndex + 1} / ${pages.length}`;
+            prevPageBtn.disabled = currentPageIndex === 0;
+            nextPageBtn.disabled = currentPageIndex >= pages.length - 1;
+            deletePageBtn.disabled = pages.length <= 1;
+        }
+
+        function addNewPage() {
+            saveCurrentPageState();
+            const newPage = {
+                blocks: [],
+                arrows: [],
+                viewport: { gridX: 0, gridY: 0, scale: 1 },
+                styles: {
+                    gridBg: document.body.style.background,
+                    gridLines: grid.style.backgroundImage,
+                }
+            };
+            pages.push(newPage);
+            loadPage(pages.length - 1);
+            showToast(`Page ${pages.length} added`);
+        }
+
+        function deleteCurrentPage() {
+            if (pages.length <= 1) {
+                showToast("Cannot delete the last page.");
+                return;
+            }
+            const deletedPageIndex = currentPageIndex + 1;
+            pages.splice(currentPageIndex, 1);
+            
+            const newIndex = Math.min(currentPageIndex, pages.length - 1);
+            loadPage(newIndex);
+            showToast(`Page ${deletedPageIndex} deleted`);
+        }
+        
+        function goToNextPage() {
+            if (currentPageIndex < pages.length - 1) loadPage(currentPageIndex + 1);
+        }
+        function goToPrevPage() {
+            if (currentPageIndex > 0) loadPage(currentPageIndex - 1);
+        }
+
+        function saveAllPages() {
+            saveCurrentPageState();
+            const state = {
+                formatVersion: "2.0",
+                pages: pages
+            };
+            download('mentmap-presentation.json', JSON.stringify(state, null, 2));
+        }
+
+        function loadAllPages(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    applyState(JSON.parse(e.target.result));
+                    const loadedData = JSON.parse(e.target.result);
+                    if (loadedData.pages && Array.isArray(loadedData.pages)) {
+                        pages = loadedData.pages;
+                    } else {
+                        pages = [loadedData]; // Backward compatibility
+                    }
+                    loadPage(0, true);
                 } catch (err) {
                     console.error('Error parsing JSON:', err);
                     showToast('Failed to load file. It may be corrupted.');
                 }
             };
             reader.readAsText(file);
+            fileLoader.value = '';
         }
 
-        function applyState(state) {
-            document.querySelectorAll('.block').forEach(block => block.remove());
-            svgCanvas.querySelectorAll('.arrow-group').forEach(el => el.remove());
-            svgDefs.innerHTML = ''; // Clear all markers
-            deselectAll();
-            gridX = 0; gridY = 0; scale = 1;
-
-            if (state.viewport) {
-                gridX = state.viewport.gridX || 0;
-                gridY = state.viewport.gridY || 0;
-                scale = state.viewport.scale || 1;
-            }
-            updateGridTransform();
-
-            if (state.styles) {
-                if (state.styles.gridBg) document.body.style.background = state.styles.gridBg;
-                if (state.styles.gridLines) grid.style.backgroundImage = state.styles.gridLines;
-            }
-            if (state.blocks) state.blocks.forEach(createBlock);
-            if (state.arrows) {
-                state.arrows.forEach(arrowData => {
-                    const startBlock = document.getElementById(arrowData.startBlock);
-                    const endBlock = document.getElementById(arrowData.endBlock);
-                    if (!startBlock || !endBlock) return;
-                    createArrow(arrowData);
-                });
-            }
-        }
-
-        // --- Utility Functions ---
          function duplicateSelection() {
             const idMap = new Map();
             const newSelection = [];
@@ -1804,7 +1975,10 @@
             element.click();
             document.body.removeChild(element);
         }
+
+        // --- Start the application ---
+        initialize();
     });
-    </script>
+</script>
 </body>
 </html>
