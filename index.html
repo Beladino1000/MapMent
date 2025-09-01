@@ -174,20 +174,6 @@
         .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
         .handle-w { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
         .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
-        
-        .drag-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            cursor: grab;
-            z-index: 15; /* Above content, below resize handles */
-        }
-        .block.is-editing .drag-overlay {
-            pointer-events: none; /* Disable when editing text to allow selection */
-        }
-
 
         .coordinates {
             position: fixed; bottom: 90px; right: 20px;
@@ -633,10 +619,6 @@
 
             if (config.handleColor) block.style.setProperty('--handle-color', config.handleColor);
             if (config.handleDisplay) block.style.setProperty('--handle-display', config.handleDisplay);
-            
-            const dragOverlay = document.createElement('div');
-            dragOverlay.className = 'drag-overlay';
-            block.appendChild(dragOverlay);
 
             const contentEl = document.createElement('div');
             contentEl.className = 'block-content';
@@ -653,8 +635,7 @@
             grid.appendChild(block);
 
             block.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
-            dragOverlay.addEventListener('click', (e) => handleOverlayClick(e));
-            dragOverlay.addEventListener('dblclick', (e) => handleOverlayDblClick(e, block));
+            block.addEventListener('dblclick', (e) => handleBlockDblClick(e, block));
             
             contentEl.addEventListener('blur', (e) => {
                 if (!customizePanel.contains(e.relatedTarget)) {
@@ -700,21 +681,11 @@
         }
 
         // --- Event Handlers ---
-        function handleOverlayClick(e) {
-            if (mouseMoved) return;
-            
-            const overlay = e.target;
-            overlay.style.pointerEvents = 'none';
-            
-            const elementUnderneath = document.elementFromPoint(e.clientX, e.clientY);
-            if (elementUnderneath && typeof elementUnderneath.click === 'function') {
-                elementUnderneath.click();
+        function handleBlockDblClick(e, block) {
+            // Prevent editing when double clicking on interactive content like links or iframes
+            if (e.target.closest('a, button, input, iframe, video')) {
+                return;
             }
-            
-            overlay.style.pointerEvents = 'auto';
-        }
-
-        function handleOverlayDblClick(e, block) {
             startEditing(block, e);
         }
 
@@ -734,7 +705,6 @@
                 resizeDirection = handle.className.match(/handle-([a-z]{1,2})/)[1];
                 currentBlock = block;
                 
-                // MODIFIED: Capture the block's initial state ONCE
                 resizeInitialRect = {
                     width: block.offsetWidth,
                     height: block.offsetHeight,
@@ -746,23 +716,21 @@
                 return;
             }
 
-            if (e.target.classList.contains('drag-overlay')) {
-                if (isArrowMode || ctrlPressed) {
-                    isDrawingArrow = true;
-                    arrowStartBlock = block;
-                    mouseMoved = false;
-                    startArrow(e, block);
-                    return;
-                }
-                
-                currentBlock = block;
+            if (isArrowMode || ctrlPressed) {
+                isDrawingArrow = true;
+                arrowStartBlock = block;
                 mouseMoved = false;
+                startArrow(e, block);
+                return;
+            }
+            
+            currentBlock = block;
+            mouseMoved = false;
 
-                if (e.shiftKey) {
-                    updateSelection(block, true);
-                } else if (!selection.includes(block)) {
-                    updateSelection(block, false);
-                }
+            if (e.shiftKey) {
+                updateSelection(block, true);
+            } else if (!selection.includes(block)) {
+                updateSelection(block, false);
             }
         }
 
@@ -808,7 +776,7 @@
 
             if (isResizing) {
                 document.body.style.cursor = 'default';
-                resizeInitialRect = null; // MODIFIED: Clear the initial rect state
+                resizeInitialRect = null;
             }
             if (isPanning) {
                  document.body.style.cursor = 'default';
@@ -1093,7 +1061,6 @@
 
         // --- Dragging, Panning, Resizing, and Arrow Drawing ---
         
-        // MODIFIED: This function now uses the captured resizeInitialRect for stable calculations
         function resizeBlock(e) {
             if (!isResizing || !currentBlock || !resizeInitialRect) return;
 
