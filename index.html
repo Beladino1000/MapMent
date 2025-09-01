@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Canvas - MentMap</title>
     <style>
-        :root {
-            --handle-default-color: rgba(0, 0, 0, 0.4);
-            --handle-selected-color: #3498db;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -154,32 +149,32 @@
         
         .resize-handle {
             position: absolute;
-            width: 8px; /* More discrete size */
-            height: 8px;
-            background: var(--handle-default-color); /* Discrete color */
+            width: 10px;
+            height: 10px;
+            /* --handle-color and --handle-display are set via JS for customization */
+            background: var(--handle-color, rgba(128, 128, 128, 0.5));
+            display: var(--handle-display, block);
+            border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
             z-index: 20;
-            transition: transform 0.2s, background-color 0.2s;
+            opacity: 0.6;
+            transition: opacity 0.2s, background-color 0.2s;
         }
-        .block:hover .resize-handle,
-        .block.selected .resize-handle {
-             /* Use custom property for color, falling back to default */
-            background-color: var(--handle-color, var(--handle-selected-color));
-            transform: scale(1.5);
+        .block:hover .resize-handle {
+            opacity: 1;
+            background-color: var(--handle-color, #3498db);
         }
-        .block.handles-hidden .resize-handle {
-            display: none;
-        }
-        .handle-nw { top: -4px; left: -4px; cursor: nwse-resize; }
-        .handle-ne { top: -4px; right: -4px; cursor: nesw-resize; }
-        .handle-sw { bottom: -4px; left: -4px; cursor: nesw-resize; }
-        .handle-se { bottom: -4px; right: -4px; cursor: nwse-resize; }
-        .handle-n { top: -4px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-        .handle-s { bottom: -4px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-        .handle-w { top: 50%; left: -4px; transform: translateY(-50%); cursor: ew-resize; }
-        .handle-e { top: 50%; right: -4px; transform: translateY(-50%); cursor: ew-resize; }
 
-        /* NEW: Drag overlay to capture events on top of content */
+        /* 8-Point Handle Positioning */
+        .handle-n { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+        .handle-e { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
+        .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+        .handle-s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+        .handle-w { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
+        .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+        
         .drag-overlay {
             position: absolute;
             top: 0;
@@ -281,7 +276,7 @@
             background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;
         }
          .control-group input[type="checkbox"] {
-            width: 20px; height: 20px;
+            width: auto;
         }
         .text-format-buttons {
             display: flex;
@@ -420,13 +415,8 @@
     <div id="customize-panel">
         <div class="panel-header"><h3>Customize</h3><button class="panel-close-btn">&times;</button></div>
         <div class="panel-content">
-            <div id="block-controls" class="control-group hidden">
-                <h4>Block</h4>
-                <label><span>Background</span><input type="color" id="block-bg-color"></label>
-                <label><span>Border</span><input type="color" id="block-border-color"></label>
-                <label><span>Handle Color</span><input type="color" id="handle-color"></label>
-                <label><span>Hide Handles</span><input type="checkbox" id="hide-handles-check"></label>
-            </div>
+            <div id="block-controls" class="control-group hidden"><h4>Block</h4><label><span>Background</span><input type="color" id="block-bg-color"></label><label><span>Border</span><input type="color" id="block-border-color"></label></div>
+            <div id="handle-controls" class="control-group hidden"><h4>Handles</h4><label><span>Color</span><input type="color" id="handle-color"></label><label><span>Visible</span><input type="checkbox" id="handle-visible" checked></label></div>
             <div id="text-controls" class="control-group hidden">
                 <h4>Text</h4>
                 <div class="text-format-buttons">
@@ -447,7 +437,7 @@
     
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
-    <script src="https://unpkg.com/mammoth@1.5.1/mammoth.browser.min.js"></script>
+<script src="https://unpkg.com/mammoth@1.5.1/mammoth.browser.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // --- Element References ---
@@ -472,12 +462,12 @@
         let isResizing = false;
         let isMarqueeSelecting = false;
         let resizeDirection = '';
+        let resizeInitialRect = null; // NEW: To store block dimensions at the start of a resize
         let currentBlock = null, arrowStartBlock = null;
         let selection = []; 
         let lastSelectedItem = null; 
         let startX, startY, mouseMoved = false, lastMouseX = 0, lastMouseY = 0;
         let dragInitialPositions = [];
-        let resizeInitialRect = {}; // NEW: Store initial dimensions for resizing
         let contextMenuX, contextMenuY;
         let gridX = 0, gridY = 0, blockCounter = 1;
         let scale = 1;
@@ -632,9 +622,6 @@
             const block = document.createElement('div');
             block.id = config.id || `block-${blockCounter++}`;
             block.className = 'block';
-             if (config.handlesHidden) {
-                block.classList.add('handles-hidden');
-            }
             block.style.left = `${config.x}px`;
             block.style.top = `${config.y}px`;
             block.style.width = config.width || '200px';
@@ -643,9 +630,10 @@
             }
             if (config.bgColor) block.style.backgroundColor = config.bgColor;
             if (config.borderColor) block.style.borderColor = config.borderColor;
+
             if (config.handleColor) block.style.setProperty('--handle-color', config.handleColor);
+            if (config.handleDisplay) block.style.setProperty('--handle-display', config.handleDisplay);
             
-            // MODIFIED: Create and append drag overlay first
             const dragOverlay = document.createElement('div');
             dragOverlay.className = 'drag-overlay';
             block.appendChild(dragOverlay);
@@ -655,35 +643,16 @@
             contentEl.innerHTML = config.htmlContent || config.content || '';
             block.appendChild(contentEl);
 
-            // UPDATED: Create 8 resize handles
             const handles = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
             handles.forEach(handle => {
                 const handleEl = document.createElement('div');
                 handleEl.className = `resize-handle handle-${handle}`;
                 block.appendChild(handleEl);
-                // Add mousedown listener directly to handles for resizing
-                handleEl.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    isResizing = true;
-                    resizeDirection = handle;
-                    currentBlock = block;
-                    // Store initial state for resizing calculations
-                    resizeInitialRect = {
-                        width: block.offsetWidth,
-                        height: block.offsetHeight,
-                        left: block.offsetLeft,
-                        top: block.offsetTop,
-                    };
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    document.body.style.cursor = `${handle}-resize`;
-                });
             });
             
             grid.appendChild(block);
 
-            // MODIFIED: Attach drag/interaction listeners to the overlay
-            dragOverlay.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
+            block.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
             dragOverlay.addEventListener('click', (e) => handleOverlayClick(e));
             dragOverlay.addEventListener('dblclick', (e) => handleOverlayDblClick(e, block));
             
@@ -731,19 +700,18 @@
         }
 
         // --- Event Handlers ---
-        // NEW: Handlers for click-through and double-click on overlay
         function handleOverlayClick(e) {
-            if (mouseMoved) return; // This was a drag, not a click
+            if (mouseMoved) return;
             
             const overlay = e.target;
-            overlay.style.pointerEvents = 'none'; // Temporarily disable overlay
+            overlay.style.pointerEvents = 'none';
             
             const elementUnderneath = document.elementFromPoint(e.clientX, e.clientY);
             if (elementUnderneath && typeof elementUnderneath.click === 'function') {
-                elementUnderneath.click(); // Trigger click on content
+                elementUnderneath.click();
             }
             
-            overlay.style.pointerEvents = 'auto'; // Re-enable overlay
+            overlay.style.pointerEvents = 'auto';
         }
 
         function handleOverlayDblClick(e, block) {
@@ -751,31 +719,50 @@
         }
 
         function handleBlockMouseDown(e, block) {
-            // This event now fires from the .drag-overlay
-            e.stopPropagation(); // Prevent grid mousedown from firing
-            
+            e.stopPropagation();
             startX = e.clientX;
             startY = e.clientY;
-            mouseMoved = false;
 
             const contentEl = block.querySelector('.block-content');
             if (isEditing && contentEl.contains(e.target)) {
                 return;
             }
-
-            if (isArrowMode || ctrlPressed) {
-                isDrawingArrow = true;
-                arrowStartBlock = block;
-                startArrow(e, block);
+            
+            const handle = e.target.closest('.resize-handle');
+            if (handle) {
+                isResizing = true;
+                resizeDirection = handle.className.match(/handle-([a-z]{1,2})/)[1];
+                currentBlock = block;
+                
+                // MODIFIED: Capture the block's initial state ONCE
+                resizeInitialRect = {
+                    width: block.offsetWidth,
+                    height: block.offsetHeight,
+                    left: block.offsetLeft,
+                    top: block.offsetTop,
+                };
+                
+                document.body.style.cursor = getComputedStyle(handle).cursor;
                 return;
             }
-            
-            currentBlock = block;
 
-            if (e.shiftKey) {
-                updateSelection(block, true);
-            } else if (!selection.includes(block)) {
-                updateSelection(block, false);
+            if (e.target.classList.contains('drag-overlay')) {
+                if (isArrowMode || ctrlPressed) {
+                    isDrawingArrow = true;
+                    arrowStartBlock = block;
+                    mouseMoved = false;
+                    startArrow(e, block);
+                    return;
+                }
+                
+                currentBlock = block;
+                mouseMoved = false;
+
+                if (e.shiftKey) {
+                    updateSelection(block, true);
+                } else if (!selection.includes(block)) {
+                    updateSelection(block, false);
+                }
             }
         }
 
@@ -784,7 +771,7 @@
             lastMouseY = e.clientY;
 
             const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
-            if (dist > 3 && (currentBlock || isPanning || isMarqueeSelecting) ) mouseMoved = true;
+            if (dist > 3) mouseMoved = true;
 
             if (currentBlock && !isDragging && !isResizing && !isPanning && !isDrawingArrow && mouseMoved) {
                 isDragging = true;
@@ -819,7 +806,10 @@
                 dragInitialPositions = [];
             }
 
-            if (isResizing) document.body.style.cursor = 'default';
+            if (isResizing) {
+                document.body.style.cursor = 'default';
+                resizeInitialRect = null; // MODIFIED: Clear the initial rect state
+            }
             if (isPanning) {
                  document.body.style.cursor = 'default';
                  instructions.textContent = "Hold Shift or Middle-Click to pan | Scroll to Zoom";
@@ -843,9 +833,6 @@
         function handleGridMouseDown(e) {
             const isGridElement = e.target === grid || e.target === svgCanvas || e.target === container;
             if (isGridElement) {
-                startX = e.clientX;
-                startY = e.clientY;
-
                 if (e.shiftKey || e.button === 1) {
                     isPanning = true;
                     instructions.textContent = "Panning...";
@@ -1024,7 +1011,7 @@
                     toggleArrowModeBtn.classList.add('active');
                 }
             }
-            if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (e.key === 'Delete') {
                 selection.forEach(item => {
                     if (item.classList.contains('block')) {
                         const blockId = item.id;
@@ -1083,7 +1070,7 @@
             const contentEl = block.querySelector('.block-content');
             if (contentEl && !contentEl.querySelector('iframe')) {
                 isEditing = true;
-                block.classList.add('is-editing'); // NEW: Add class to disable overlay
+                block.classList.add('is-editing');
                 activeEditingElement = contentEl;
                 contentEl.contentEditable = true;
                 contentEl.focus();
@@ -1096,7 +1083,7 @@
             const contentEl = block.querySelector('.block-content');
             if (contentEl && contentEl.isContentEditable) {
                 isEditing = false;
-                block.classList.remove('is-editing'); // NEW: Remove class
+                block.classList.remove('is-editing');
                 activeEditingElement = null;
                 savedSelectionRange = null;
                 contentEl.contentEditable = false;
@@ -1105,13 +1092,14 @@
         }
 
         // --- Dragging, Panning, Resizing, and Arrow Drawing ---
+        
+        // MODIFIED: This function now uses the captured resizeInitialRect for stable calculations
         function resizeBlock(e) {
-            if (!isResizing || !currentBlock) return;
+            if (!isResizing || !currentBlock || !resizeInitialRect) return;
 
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
-            const minSize = 50;
-
+            
             let newWidth = resizeInitialRect.width;
             let newHeight = resizeInitialRect.height;
             let newLeft = resizeInitialRect.left;
@@ -1132,6 +1120,7 @@
                 newTop = resizeInitialRect.top + dy;
             }
 
+            const minSize = 50;
             if (newWidth >= minSize) {
                 currentBlock.style.width = `${newWidth}px`;
                 currentBlock.style.left = `${newLeft}px`;
@@ -1140,10 +1129,9 @@
                 currentBlock.style.height = `${newHeight}px`;
                 currentBlock.style.top = `${newTop}px`;
             }
-
+            
             updateArrowsForBlock(currentBlock);
         }
-
 
         function dragBlock(e) {
             const dx = (e.clientX - startX) / scale;
@@ -1431,14 +1419,15 @@
         // --- Customization Panel ---
         const customizeInputs = {
             block: document.getElementById('block-controls'), 
+            handle: document.getElementById('handle-controls'),
             text: document.getElementById('text-controls'), 
             link: document.getElementById('link-controls'),
             arrow: document.getElementById('arrow-controls'),
             grid: document.getElementById('grid-controls'),
             blockBg: document.getElementById('block-bg-color'), 
             blockBorder: document.getElementById('block-border-color'),
-            handleColor: document.getElementById('handle-color'), // NEW
-            hideHandles: document.getElementById('hide-handles-check'), // NEW
+            handleColor: document.getElementById('handle-color'),
+            handleVisible: document.getElementById('handle-visible'),
             textColor: document.getElementById('text-color'), 
             textSize: document.getElementById('text-size'),
             textFont: document.getElementById('text-font'),
@@ -1461,6 +1450,7 @@
             const hasIframe = lastSelectedBlock && lastSelectedBlock.querySelector('iframe');
             
             customizeInputs.block.classList.toggle('hidden', !hasBlock);
+            customizeInputs.handle.classList.toggle('hidden', !hasBlock);
             customizeInputs.arrow.classList.toggle('hidden', !hasArrow);
             customizeInputs.grid.classList.toggle('hidden', hasBlock || hasArrow);
             
@@ -1471,8 +1461,10 @@
                 const computed = getComputedStyle(lastSelectedBlock);
                 customizeInputs.blockBg.value = rgbToHex(computed.backgroundColor); 
                 customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
-                customizeInputs.handleColor.value = rgbToHex(lastSelectedBlock.style.getPropertyValue('--handle-color') || '#3498db'); // NEW
-                customizeInputs.hideHandles.checked = lastSelectedBlock.classList.contains('handles-hidden'); // NEW
+                
+                const handleColor = computed.getPropertyValue('--handle-color').trim();
+                customizeInputs.handleColor.value = handleColor ? rgbToHex(handleColor) : '#808080';
+                customizeInputs.handleVisible.checked = computed.getPropertyValue('--handle-display').trim() !== 'none';
 
                 if (hasIframe) {
                     customizeInputs.linkSrc.value = hasIframe.src;
@@ -1536,8 +1528,9 @@
         
         customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
         customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
+        
         customizeInputs.handleColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.setProperty('--handle-color', e.target.value); }); });
-        customizeInputs.hideHandles.addEventListener('change', e => { selection.forEach(item => { if (item.classList.contains('block')) item.classList.toggle('handles-hidden', e.target.checked); }); });
+        customizeInputs.handleVisible.addEventListener('change', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.setProperty('--handle-display', e.target.checked ? 'block' : 'none'); }); });
         
         customizeInputs.textColor.addEventListener('input', e => formatText('foreColor', e.target.value));
         customizeInputs.textSize.addEventListener('change', e => formatText('fontSize', e.target.value));
@@ -1578,8 +1571,8 @@
                         height: block.style.height,
                         bgColor: block.style.backgroundColor,
                         borderColor: block.style.borderColor,
-                        handleColor: block.style.getPropertyValue('--handle-color'), // NEW
-                        handlesHidden: block.classList.contains('handles-hidden'), // NEW
+                        handleColor: block.style.getPropertyValue('--handle-color'),
+                        handleDisplay: block.style.getPropertyValue('--handle-display'),
                     };
                 }),
                 arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(arrowGroup => {
@@ -1676,7 +1669,7 @@
                     bgColor: block.style.backgroundColor,
                     borderColor: block.style.borderColor,
                     handleColor: block.style.getPropertyValue('--handle-color'),
-                    handlesHidden: block.classList.contains('handles-hidden'),
+                    handleDisplay: block.style.getPropertyValue('--handle-display'),
                 };
                 const newBlock = createBlock(config);
                 idMap.set(block.id, newBlock.id);
@@ -1726,8 +1719,7 @@
 
         function rgbToHex(rgb) {
             if (!rgb || rgb === 'transparent') return '#ffffff';
-            // Handle CSS variables like var(--handle-color)
-            if (rgb.startsWith('var')) return '#3498db'; // Fallback for now
+            if (rgb.startsWith('#')) return rgb;
             const rgbArr = rgb.match(/\d+/g);
             if (!rgbArr) return '#000000';
             const hex = rgbArr.map(x => ('0' + parseInt(x).toString(16)).slice(-2)).join('');
