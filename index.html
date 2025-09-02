@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Canvas - MentMap</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
+
     <style>
         * {
             margin: 0;
@@ -21,7 +24,7 @@
             color: #333;
             cursor: default;
             transition: background 0.5s;
-            user-select: none; /* Prevent selecting text on the body */
+            user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
@@ -39,7 +42,7 @@
 
         .grid {
             position: absolute;
-            width: 500vw; /* Start with a larger base size */
+            width: 500vw;
             height: 500vh;
             left: 0;
             top: 0;
@@ -89,7 +92,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 15px;
             cursor: grab;
-            overflow: visible; /* Allow handles to be outside */
+            overflow: visible;
             transition: border-color 0.3s, box-shadow 0.3s;
             user-select: none;
             z-index: 10;
@@ -151,7 +154,6 @@
             position: absolute;
             width: 10px;
             height: 10px;
-            /* --handle-color and --handle-display are set via JS for customization */
             background: var(--handle-color, rgba(128, 128, 128, 0.5));
             display: var(--handle-display, block);
             border: 1px solid rgba(255, 255, 255, 0.8);
@@ -165,7 +167,6 @@
             background-color: var(--handle-color, #3498db);
         }
 
-        /* 8-Point Handle Positioning */
         .handle-n { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
         .handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
         .handle-e { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
@@ -174,59 +175,152 @@
         .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
         .handle-w { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
         .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
-
+        
         .coordinates {
-            position: fixed; bottom: 90px; right: 20px;
-            background: rgba(0, 0, 0, 0.6); color: white; padding: 10px 15px;
-            border-radius: 20px; font-size: 0.9rem; z-index: 1000; cursor: pointer;
-            min-width: 180px;
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px;
+            background: rgba(40, 40, 40, 0.9);
+            backdrop-filter: blur(10px);
+            color: white; 
+            padding: 10px 15px;
+            border-radius: 10px; 
+            font-size: 0.9rem; 
+            z-index: 2001; 
+            cursor: pointer;
+            min-width: 200px;
             text-align: right;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .coordinates.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
         }
         .coordinates input {
-            width: 60px; background: #333; color: white; border: 1px solid #555;
-            border-radius: 5px; padding: 2px 5px; text-align: center;
+            width: 70px; 
+            background: #333; 
+            color: white; 
+            border: 1px solid #555;
+            border-radius: 5px; 
+            padding: 2px 5px; 
+            text-align: center;
+            margin: 0 2px;
         }
 
-        .instructions {
-            position: fixed; bottom: 90px; left: 20px;
-            background: rgba(0, 0, 0, 0.6); color: white; padding: 10px 15px;
-            border-radius: 20px; font-size: 0.9rem; z-index: 1000; opacity: 0.8;
-        }
-
-        .control-panel {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9); padding: 10px 15px;
-            border-radius: 50px; display: flex; gap: 10px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2); z-index: 1000;
-        }
-
-        .control-btn {
-            background: #2c5364; color: white; border: none; padding: 10px 18px;
-            border-radius: 30px; cursor: pointer; font-weight: 600;
-            transition: all 0.3s; display: flex; align-items: center; gap: 8px;
-            font-size: 14px;
-        }
-        .control-btn.active { background: #e74c3c; }
-        .control-btn:hover { background: #3498db; transform: translateY(-2px); }
-        .btn-icon { font-size: 16px; }
-        
-        /* --- New Page Controls CSS --- */
-        .page-controls {
+        .shortcut-hint {
             position: fixed;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 20px;
+            left: 20px;
+            background: rgba(40, 40, 40, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            opacity: 0.9;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .shortcut-hint kbd {
+            background: #555;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+
+        #context-menu {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            background: rgba(50, 50, 50, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+        }
+        #context-menu ul { list-style: none; padding: 0; margin: 0; }
+        #context-menu li { padding: 8px 15px; color: white; cursor: pointer; border-radius: 5px; font-size: 14px; }
+        #context-menu li:hover { background: #3498db; }
+
+        .marquee-box {
+            position: fixed;
+            border: 1px dashed #3498db;
+            background: rgba(52, 152, 219, 0.2);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            z-index: 10000;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+            pointer-events: none;
+        }
+        .toast-notification.show { opacity: 1; bottom: 100px; }
+
+        input, textarea, select {
+            user-select: auto;
+            -webkit-user-select: auto;
+            -moz-user-select: auto;
+            -ms-user-select: auto;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100vh;
+            background: rgba(40, 40, 40, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            overflow-y: auto;
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar.hidden {
+            transform: translateX(100%);
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #555;
+        }
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+        .sidebar-section h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #aaa;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #555;
+        }
+
+        .page-controls {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            background: rgba(40, 40, 40, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 15px 10px;
-            border-radius: 25px;
-            z-index: 1001;
         }
-
         .page-btn {
             background: #555;
             color: white;
@@ -253,9 +347,7 @@
             background-color: #555;
         }
         #page-display {
-            color: white;
             font-weight: 600;
-            font-size: 14px;
             background: rgba(0,0,0,0.3);
             padding: 5px 10px;
             border-radius: 15px;
@@ -263,160 +355,67 @@
             text-align: center;
             margin: 5px 0;
         }
-        /* --- End of New CSS --- */
 
-        #customize-panel {
-            display: none;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 280px;
-            background: rgba(40, 40, 40, 0.9);
-            backdrop-filter: blur(10px);
+        .actions-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .control-btn {
+            width: 100%;
+            background: #555;
             color: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            z-index: 2000;
+            border: 1px solid #666;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             font-size: 14px;
         }
-        .panel-header {
-            padding: 10px 15px;
-            background: rgba(0,0,0,0.3);
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-            cursor: move;
+        .control-btn.active { background: #e74c3c; }
+        .control-btn:hover { background: #3498db; }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 8px;
         }
-        .panel-header h3 { font-weight: 600; }
-        .panel-close-btn {
-            background: none; border: none; color: white; font-size: 20px;
-            cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
-        }
-        .panel-close-btn:hover { opacity: 1; }
-        .panel-content { padding: 15px; }
-        .control-group { margin-bottom: 15px; }
-        .control-group h4 {
-            font-size: 12px; text-transform: uppercase;
-            color: #aaa; margin-bottom: 8px; border-bottom: 1px solid #555; padding-bottom: 5px;
-        }
-        .control-group label {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
-        }
-        .control-group input[type="color"] {
-            -webkit-appearance: none; -moz-appearance: none; appearance: none;
-            width: 24px; height: 24px; background-color: transparent;
-            border: none; cursor: pointer; padding: 0;
-        }
-        .control-group input[type="color"]::-webkit-color-swatch {
-            border-radius: 50%; border: 1px solid #666;
+        .color-picker-wrapper {
+            width: 24px;
+            height: 24px;
         }
         .control-group input[type="range"], .control-group input[type="number"], .control-group select, .control-group input[type="text"], .control-group input[type="checkbox"] {
             width: 120px;
             background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;
         }
-        .control-group input[type="checkbox"] {
-            width: auto;
-        }
-        .text-format-buttons {
-            display: flex;
-            gap: 10px;
-        }
+        .control-group input[type="checkbox"] { width: auto; }
+        .text-format-buttons { display: flex; gap: 10px; }
         .format-btn {
-            flex: 1;
-            background: #555;
-            border: 1px solid #666;
-            color: white;
-            padding: 5px;
-            border-radius: 4px;
-            cursor: pointer;
+            flex: 1; background: #555; border: 1px solid #666;
+            color: white; padding: 5px; border-radius: 4px; cursor: pointer;
         }
         .format-btn:hover { background: #666; }
         .hidden { display: none !important; }
-        
-        .shortcut-hint {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            z-index: 1000;
-            opacity: 0.9;
-        }
-        .shortcut-hint kbd {
-            background: #555;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.85em;
-        }
 
-        #context-menu {
-            display: none;
-            position: fixed;
+        /* Custom Color Picker Theme */
+        .pickr .pcr-button {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+        }
+         .pickr .pcr-button::before {
+            border-radius: 50%;
+        }
+        .pcr-app {
             z-index: 3000;
-            background: rgba(50, 50, 50, 0.9);
-            backdrop-filter: blur(10px);
-            border-radius: 8px;
-            padding: 5px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
         }
-        #context-menu ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        #context-menu li {
-            padding: 8px 15px;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        #context-menu li:hover {
-            background: #3498db;
-        }
-
-        .marquee-box {
-            position: fixed;
-            border: 1px dashed #3498db;
-            background: rgba(52, 152, 219, 0.2);
-            pointer-events: none;
-            z-index: 9999;
-        }
-
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            z-index: 10000;
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.3s, bottom 0.3s;
-            pointer-events: none;
-        }
-        .toast-notification.show {
-            opacity: 1;
-            bottom: 100px;
-        }
-
-        input, textarea, select {
-            user-select: auto;
-            -webkit-user-select: auto;
-            -moz-user-select: auto;
-            -ms-user-select: auto;
-        }
-
     </style>
 </head>
 <body>
@@ -429,36 +428,74 @@
     </div>
 
     <div class="coordinates" id="coordinates">Nothing selected</div>
-    <div class="instructions" id="instructions">Hold Shift or Middle-Click to pan | Scroll to Zoom</div>
-    
+
     <div class="shortcut-hint" id="shortcut-hint" style="display: none;">
-        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br>
-        <kbd>←</kbd> / <kbd>→</kbd> ou <kbd>PgUp</kbd> / <kbd>PgDn</kbd> para mudar de slide<br>
+        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br><hr style="border-color: #555; margin: 5px 0;">
+        <b>Navegação e Visualização:</b><br>
         Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa<br>
         Use o <kbd>Scroll</kbd> para dar zoom<br>
-        Pressione <kbd>Shift</kbd> + <kbd>A</kbd> para abrir menu de adição<br>
-        Pressione <kbd>Shift</kbd> + <kbd>D</kbd> para duplicar/adicionar bloco<br>
-        Segure <kbd>Ctrl</kbd> para criar setas entre blocos<br>
-        Pressione <kbd>Delete</kbd> para apagar itens selecionados<br>
-        Pressione <kbd>B</kbd> para abrir/fechar o painel de customização<br>
-        Pressione <kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar<br>
-        Pressione <kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar
+        <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide<br>
+        <kbd>G</kbd> Esconder/Mostrar Painel Lateral<br>
+        <kbd>N</kbd> Esconder/Mostrar Coordenadas<br>
+        <hr style="border-color: #555; margin: 5px 0;">
+        <b>Ações e Atalhos:</b><br>
+        <kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo<br>
+        <kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar<br>
+        <kbd>Shift</kbd> + <kbd>+</kbd> Adicionar Slide<br>
+        <kbd>Shift</kbd> + <kbd>-</kbd> Deletar Slide<br>
+        <kbd>B</kbd> Paleta de Cores Inteligente<br>
+        <kbd>Delete</kbd> Apagar itens<br>
+        <kbd>Ctrl</kbd> + <kbd>Z</kbd> Desfazer<br>
+        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Refazer<br>
+        <kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar<br>
+        <kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar
     </div>
 
-    <div class="control-panel">
-        <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Adicionar conteúdo</span></button>
-        <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Seta</span></button>
-        <button class="control-btn" id="toggle-customize-btn"><span class="btn-icon">🎨</span><span>Customizar</span></button>
-        <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Salvar</span></button>
-        <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Carregar</span></button>
-    </div>
-
-    <div class="page-controls">
-        <button class="page-btn" id="prev-page-btn" title="Previous Page (Page Up / ←)">▲</button>
-        <span id="page-display">Page 1 / 1</span>
-        <button class="page-btn" id="next-page-btn" title="Next Page (Page Down / →)">▼</button>
-        <button class="page-btn" id="add-page-btn" title="Add New Page">+</button>
-        <button class="page-btn" id="delete-page-btn" title="Delete Current Page">🗑️</button>
+    <div class="sidebar">
+        <div class="sidebar-section">
+            <h4>Slides</h4>
+            <div class="page-controls">
+                <button class="page-btn" id="prev-page-btn" title="Previous Page (←)">▲</button>
+                <span id="page-display">Page 1 / 1</span>
+                <button class="page-btn" id="next-page-btn" title="Next Page (→)">▼</button>
+                <button class="page-btn" id="add-page-btn" title="Add New Page (Shift +)">+</button>
+                <button class="page-btn" id="delete-page-btn" title="Delete Current Page (Shift -)">🗑️</button>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <h4>Actions</h4>
+            <div class="actions-grid">
+                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Adicionar conteúdo</span></button>
+                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Seta</span></button>
+                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Salvar</span></button>
+                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Carregar</span></button>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <h4>Customize</h4>
+            <div id="customize-content">
+                <div id="block-controls" class="control-group hidden"><h5>Block</h5><label><span>Background</span><div class="color-picker-wrapper" id="block-bg-color"></div></label><label><span>Border</span><div class="color-picker-wrapper" id="block-border-color"></div></label></div>
+                <div id="handle-controls" class="control-group hidden"><h5>Handles</h5><label><span>Color</span><div class="color-picker-wrapper" id="handle-color"></div></label><label><span>Visible</span><input type="checkbox" id="handle-visible" checked></label></div>
+                <div id="text-controls" class="control-group hidden">
+                    <h5>Text</h5>
+                    <div class="text-format-buttons">
+                        <button id="bold-btn" class="format-btn"><b>B</b></button>
+                        <button id="italic-btn" class="format-btn"><i>I</i></button>
+                        <button id="underline-btn" class="format-btn"><u>U</u></button>
+                    </div>
+                    <label><span>Color</span><div class="color-picker-wrapper" id="text-color"></div></label><label><span>Size (px)</span><input type="number" id="text-size" min="8" max="48" step="1"></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
+                </div>
+                <div id="link-controls" class="control-group hidden">
+                    <h5>Embed Link</h5>
+                    <label><span>URL</span><input type="text" id="link-src"></label>
+                </div>
+                <div id="arrow-controls" class="control-group hidden">
+                    <h5>Arrow</h5>
+                    <label><span>Color</span><div class="color-picker-wrapper" id="arrow-color"></div></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label><label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
+                </div>
+                <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" id="grid-bg-color"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" id="grid-line-color"></div></label></div>
+            </div>
+        </div>
     </div>
 
     <div id="context-menu">
@@ -472,69 +509,36 @@
             <li data-action="import-presentation">Import Presentation (PDF/PPTX)</li>
         </ul>
     </div>
-
-    <div id="customize-panel">
-        <div class="panel-header"><h3>Customize</h3><button class="panel-close-btn">&times;</button></div>
-        <div class="panel-content">
-            <div id="block-controls" class="control-group hidden"><h4>Block</h4><label><span>Background</span><input type="color" id="block-bg-color"></label><label><span>Border</span><input type="color" id="block-border-color"></label></div>
-            <div id="handle-controls" class="control-group hidden"><h4>Handles</h4><label><span>Color</span><input type="color" id="handle-color"></label><label><span>Visible</span><input type="checkbox" id="handle-visible" checked></label></div>
-            <div id="text-controls" class="control-group hidden">
-                <h4>Text</h4>
-                <div class="text-format-buttons">
-                    <button id="bold-btn" class="format-btn"><b>B</b></button>
-                    <button id="italic-btn" class="format-btn"><i>I</i></button>
-                    <button id="underline-btn" class="format-btn"><u>U</u></button>
-                </div>
-                <label><span>Color</span><input type="color" id="text-color"></label><label><span>Size (px)</span><input type="number" id="text-size" min="8" max="48" step="1"></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
-            </div>
-            <div id="link-controls" class="control-group hidden">
-                <h4>Embed Link</h4>
-                <label><span>URL</span><input type="text" id="link-src"></label>
-            </div>
-            <div id="arrow-controls" class="control-group hidden">
-                <h4>Arrow</h4>
-                <label><span>Color</span><input type="color" id="arrow-color"></label>
-                <label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
-                <label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
-            </div>
-            <div id="grid-controls" class="control-group"><h4>Grid</h4><label><span>Background</span><input type="color" id="grid-bg-color"></label><label><span>Line Color</span><input type="color" id="grid-line-color"></label></div>
-        </div>
-    </div>
     
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
 <script src="https://unpkg.com/mammoth@1.5.1/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
 
 <script>
-    // Setup PDF.js worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
 
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Element References ---
         const container = document.getElementById('container');
         const grid = document.getElementById('grid');
         const svgCanvas = document.getElementById('arrow-svg');
         const svgDefs = svgCanvas.querySelector('defs');
         const coordsDisplay = document.getElementById('coordinates');
-        const instructions = document.getElementById('instructions');
         const addContentBtn = document.getElementById('add-content-btn');
         const toggleArrowModeBtn = document.getElementById('toggle-arrow-mode-btn');
-        const toggleCustomizeBtn = document.getElementById('toggle-customize-btn');
         const saveBtn = document.getElementById('save-btn');
         const loadBtn = document.getElementById('load-btn');
         const fileLoader = document.getElementById('file-loader');
-        const customizePanel = document.getElementById('customize-panel');
         const shortcutHint = document.getElementById('shortcut-hint');
         const contextMenu = document.getElementById('context-menu');
-        // Page Controls References
         const prevPageBtn = document.getElementById('prev-page-btn');
         const nextPageBtn = document.getElementById('next-page-btn');
         const addPageBtn = document.getElementById('add-page-btn');
         const deletePageBtn = document.getElementById('delete-page-btn');
         const pageDisplay = document.getElementById('page-display');
+        const sidebar = document.querySelector('.sidebar');
     
-        // --- State Variables ---
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
         let isResizing = false;
         let isMarqueeSelecting = false;
@@ -555,17 +559,19 @@
         let activeEditingElement = null; 
         let marqueeBox = null, marqueeStartX = 0, marqueeStartY = 0;
         
-        // --- Page State Variables ---
         let pages = [];
         let currentPageIndex = 0;
 
-        // Show shortcut hint briefly on load
+        let history = [];
+        let historyIndex = -1;
+        const MAX_HISTORY_STATES = 32;
+        let activePicker = null;
+
         shortcutHint.style.display = 'block';
         setTimeout(() => {
             shortcutHint.style.display = 'none';
         }, 30000);
 
-        // --- Initial Setup ---
         function initialize() {
             const initialPage = {
                 blocks: [
@@ -582,30 +588,30 @@
             blockCounter = 2;
             pages = [initialPage];
             currentPageIndex = 0;
-            loadPage(0, true); // First load, no need to save state
+            loadPage(0, true);
+            initializeColorPickers();
+            recordState(); 
         }
         
-        // --- Event Listeners ---
+        // --- Main Event Listeners ---
         addContentBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
             contextMenuX = null;
             contextMenuY = null;
             const rect = addContentBtn.getBoundingClientRect();
-            contextMenu.style.visibility = 'hidden';
+            contextMenu.style.left = `${rect.left - contextMenu.offsetWidth}px`;
+            contextMenu.style.top = `${rect.top}px`;
             contextMenu.style.display = 'block';
-            const menuHeight = contextMenu.offsetHeight;
-            contextMenu.style.visibility = 'visible';
-            contextMenu.style.left = `${rect.left}px`;
-            contextMenu.style.top = `${rect.top - menuHeight - 10}px`;
         });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         saveBtn.addEventListener('click', saveAllPages);
         loadBtn.addEventListener('click', () => fileLoader.click());
-        fileLoader.addEventListener('change', loadAllPages);
+        fileLoader.addEventListener('change', (e) => { loadAllPages(e); });
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('keyup', handleKeyUp);
+        document.addEventListener('mousedown', handleGlobalMouseDown, true);
         container.addEventListener('mousedown', handleGridMouseDown);
         container.addEventListener('contextmenu', handleGridContextMenu);
         container.addEventListener('wheel', handleZoom, { passive: false });
@@ -619,7 +625,6 @@
         svgCanvas.addEventListener('click', handleArrowClick);
         coordsDisplay.addEventListener('click', editCoordinates);
 
-        // Page Control Listeners
         prevPageBtn.addEventListener('click', goToPrevPage);
         nextPageBtn.addEventListener('click', goToNextPage);
         addPageBtn.addEventListener('click', addNewPage);
@@ -637,17 +642,7 @@
                 }
             }
         });
-
-        toggleCustomizeBtn.addEventListener('click', () => {
-            if (customizePanel.style.display === 'block') {
-                customizePanel.style.display = 'none';
-            } else {
-                customizePanel.style.display = 'block';
-                updateCustomizePanel();
-            }
-        });
         
-        // --- Utility Functions ---
         function showToast(message, duration = 3000) {
             const toast = document.createElement('div');
             toast.className = 'toast-notification';
@@ -672,7 +667,6 @@
             grid.style.transform = `translate(${gridX}px, ${gridY}px) scale(${scale})`;
         }
 
-        // --- Selection Logic ---
         function updateSelection(item, shiftKey) {
             if (!shiftKey) {
                 deselectAll();
@@ -719,7 +713,6 @@
             updateCustomizePanel();
         }
 
-        // --- Block & Arrow Management ---
         function createBlock(config) {
             const block = document.createElement('div');
             block.id = config.id || `block-${blockCounter++}`;
@@ -753,12 +746,6 @@
             block.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
             block.addEventListener('dblclick', (e) => handleBlockDblClick(e, block));
             
-            contentEl.addEventListener('blur', (e) => {
-                if (!customizePanel.contains(e.relatedTarget)) {
-                    finishEditing(block);
-                }
-            });
-
             contentEl.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -775,7 +762,7 @@
             if(contextMenuX && contextMenuY) {
                 coords = screenToGridCoords(contextMenuX, contextMenuY);
             } else {
-                coords = screenToGridCoords(window.innerWidth / 2, window.innerHeight / 2);
+                coords = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
             }
 
             let config = { x: coords.x, y: coords.y, htmlContent: contentData };
@@ -794,9 +781,9 @@
                 sel.removeAllRanges();
                 sel.addRange(range);
             }
+            recordState();
         }
 
-        // --- Event Handlers ---
         function handleBlockDblClick(e, block) {
             if (e.target.closest('a, button, input, iframe, video')) {
                 return;
@@ -879,6 +866,8 @@
         }
 
         function handleMouseUp(e) {
+            const wasDraggingOrResizing = isDragging || isResizing;
+
             if (isDrawingArrow) endArrow(e);
             
             if (isDragging) {
@@ -896,7 +885,6 @@
             }
             if (isPanning) {
                 document.body.style.cursor = 'default';
-                instructions.textContent = "Hold Shift or Middle-Click to pan | Scroll to Zoom";
             }
             
             if (isMarqueeSelecting) {
@@ -912,6 +900,32 @@
             isDrawingArrow = false;
             arrowStartBlock = null;
             currentBlock = null;
+
+            if(wasDraggingOrResizing) {
+                recordState();
+            }
+        }
+
+        function handleGlobalMouseDown(e) {
+            if (activePicker) {
+                const pickerApp = activePicker.getRoot().app;
+                const isClickOnPickerButton = activePicker.getRoot().button.contains(e.target);
+                const isClickInsideSidebar = sidebar.contains(e.target);
+
+                if (!pickerApp.contains(e.target) && !isClickOnPickerButton && !isClickInsideSidebar) {
+                    activePicker.hide();
+                }
+            }
+            if (isEditing && activeEditingElement) {
+                const currentBlock = activeEditingElement.closest('.block');
+                const isClickInsideBlock = currentBlock.contains(e.target);
+                const isClickInsideSidebar = sidebar.contains(e.target);
+                const isClickInsidePicker = e.target.closest('.pcr-app');
+                
+                if (!isClickInsideBlock && !isClickInsideSidebar && !isClickInsidePicker) {
+                    finishEditing(currentBlock);
+                }
+            }
         }
 
         function handleGridMouseDown(e) {
@@ -919,7 +933,6 @@
             if (isGridElement) {
                 if (e.shiftKey || e.button === 1) {
                     isPanning = true;
-                    instructions.textContent = "Panning...";
                     document.body.style.cursor = 'grabbing';
                     e.preventDefault(); 
                 } else if (e.button === 0) {
@@ -1101,8 +1114,25 @@
         }
 
         function handleKeyDown(e) {
+            if (activePicker && e.key === 'Enter') {
+                e.preventDefault();
+                activePicker.emit('save', activePicker.getColor());
+                return;
+            }
+            if (isEditing && e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+                return; 
+            }
             if (isEditing) return;
             
+            if (e.ctrlKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+                e.preventDefault();
+                undo();
+            }
+            if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+                e.preventDefault();
+                redo();
+            }
+
             if (e.key === 'ArrowRight' || e.key === 'PageDown') {
                 e.preventDefault();
                 goToNextPage();
@@ -1115,10 +1145,7 @@
             if (e.key === 'Control') {
                 ctrlPressed = true;
                 if (!isArrowMode) {
-                    isArrowMode = true;
                     document.body.classList.add('arrow-mode');
-                    instructions.textContent = "Click & drag between blocks";
-                    toggleArrowModeBtn.classList.add('active');
                 }
             }
             if (e.key === 'Delete') {
@@ -1148,11 +1175,27 @@
                     }
                 });
                 deselectAll();
+                recordState();
             }
             if (e.key === 'b' || e.key === 'B') {
                 e.preventDefault();
-                customizePanel.style.display = customizePanel.style.display === 'block' ? 'none' : 'block';
-                if (customizePanel.style.display === 'block') updateCustomizePanel();
+                showSmartColorPicker();
+            }
+            if(e.key === 'g' || e.key === 'G') {
+                e.preventDefault();
+                sidebar.classList.toggle('hidden');
+            }
+            if(e.key === 'n' || e.key === 'N') {
+                e.preventDefault();
+                coordsDisplay.classList.toggle('hidden');
+            }
+            if (e.shiftKey && e.key === '+') {
+                e.preventDefault();
+                addNewPage();
+            }
+            if(e.shiftKey && e.key === '-') {
+                e.preventDefault();
+                deleteCurrentPage();
             }
             if (e.shiftKey && (e.key === 'd' || e.key === 'D')) {
                 e.preventDefault();
@@ -1175,11 +1218,8 @@
         function handleKeyUp(e) {
             if (e.key === 'Control') {
                 ctrlPressed = false;
-                if (isArrowMode) {
-                    isArrowMode = false;
-                    document.body.classList.remove('arrow-mode');
-                    instructions.textContent = "Hold Shift or Middle-Click to pan | Scroll to Zoom";
-                    toggleArrowModeBtn.classList.remove('active');
+                if (!toggleArrowModeBtn.classList.contains('active')) {
+                     document.body.classList.remove('arrow-mode');
                 }
             }
         }
@@ -1188,12 +1228,12 @@
             if (e && e.target.closest('a, button, input')) return;
             const contentEl = block.querySelector('.block-content');
             if (contentEl && !contentEl.querySelector('iframe')) {
+                sidebar.classList.remove('hidden');
                 isEditing = true;
                 block.classList.add('is-editing');
                 activeEditingElement = contentEl;
                 contentEl.contentEditable = true;
                 contentEl.focus();
-                customizePanel.style.display = 'block';
                 updateCustomizePanel();
             }
         }
@@ -1207,6 +1247,7 @@
                 savedSelectionRange = null;
                 contentEl.contentEditable = false;
                 updateArrowsForBlock(block);
+                recordState();
             }
         }
         
@@ -1309,10 +1350,8 @@
 
         function toggleArrowMode() {
             isArrowMode = !isArrowMode;
-            ctrlPressed = isArrowMode;
             document.body.classList.toggle('arrow-mode', isArrowMode);
             toggleArrowModeBtn.classList.toggle('active', isArrowMode);
-            instructions.textContent = isArrowMode ? "Click & drag between blocks" : "Hold Shift or Middle-Click to pan | Scroll to Zoom";
         }
 
         function startArrow(e, block) {
@@ -1368,6 +1407,7 @@
                 reverseArrow.dataset.bidirectional = 'true';
                 
                 tempGroup?.remove();
+                recordState();
 
             } else if (endBlock && endBlock !== arrowStartBlock) {
                 const arrowExists = svgCanvas.querySelector(`.arrow-group[data-start-block="${arrowStartBlock.id}"][data-end-block="${endBlock.id}"]`);
@@ -1396,6 +1436,7 @@
                     if (selection.includes(arrowStartBlock) && selection.includes(endBlock)) {
                         updateSelection(tempGroup, true);
                     }
+                    recordState();
                 }
             } else { 
                 tempGroup?.remove(); 
@@ -1522,9 +1563,10 @@
         }
         
         function editCoordinates(e) {
+            if (e.target.tagName === 'INPUT') return;
             e.stopPropagation();
             const blockToEdit = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : null;
-            if (!blockToEdit || isEditing) return;
+            if (!blockToEdit) return;
             const x = parseInt(blockToEdit.style.left); 
             const y = parseInt(blockToEdit.style.top);
             coordsDisplay.innerHTML = `X: <input type="number" value="${x}" id="coord-x"> Y: <input type="number" value="${y}" id="coord-y">`;
@@ -1533,95 +1575,101 @@
             inputX.focus(); 
             inputX.select();
             const applyAndClose = () => {
+                const newX = parseInt(inputX.value || 0);
+                const newY = parseInt(inputY.value || 0);
                 const gridSize = 30;
-                blockToEdit.style.left = `${Math.max(0, Math.round(parseInt(inputX.value || 0) / gridSize) * gridSize)}px`;
-                blockToEdit.style.top = `${Math.max(0, Math.round(parseInt(inputY.value || 0) / gridSize) * gridSize)}px`;
+                blockToEdit.style.left = `${Math.max(0, Math.round(newX / gridSize) * gridSize)}px`;
+                blockToEdit.style.top = `${Math.max(0, Math.round(newY / gridSize) * gridSize)}px`;
                 updateArrowsForBlock(blockToEdit); 
                 updateCoordinates();
                 document.removeEventListener('click', handleClickOutside, true);
+                document.removeEventListener('keydown', handleInputKeyDown, true);
+                recordState();
+            };
+            const handleInputKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyAndClose();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    updateCoordinates(); 
+                    document.removeEventListener('click', handleClickOutside, true);
+                    document.removeEventListener('keydown', handleInputKeyDown, true);
+                }
             };
             const handleClickOutside = (e) => {
-                if (!coordsDisplay.contains(e.target)) applyAndClose();
+                if (!coordsDisplay.contains(e.target)) {
+                    applyAndClose();
+                }
             };
-            setTimeout(() => document.addEventListener('click', handleClickOutside, true), 0);
-            [inputX, inputY].forEach(input => {
-                input.addEventListener('keydown', e => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        applyAndClose();
-                    }
-                });
-            });
+            setTimeout(() => {
+                document.addEventListener('click', handleClickOutside, true);
+                document.addEventListener('keydown', handleInputKeyDown, true);
+            }, 0);
         }
 
-        const customizeInputs = {
+        let customizeInputs = {}; 
+        const nonColorInputs = {
+            handleVisible: document.getElementById('handle-visible'),
+            textSize: document.getElementById('text-size'),
+            textFont: document.getElementById('text-font'),
+            linkSrc: document.getElementById('link-src'),
+            arrowWidth: document.getElementById('arrow-width'),
+            arrowHeadSize: document.getElementById('arrow-head-size'),
+            boldBtn: document.getElementById('bold-btn'),
+            italicBtn: document.getElementById('italic-btn'),
+            underlineBtn: document.getElementById('underline-btn'),
+        };
+        const controlGroups = {
             block: document.getElementById('block-controls'), 
             handle: document.getElementById('handle-controls'),
             text: document.getElementById('text-controls'), 
             link: document.getElementById('link-controls'),
             arrow: document.getElementById('arrow-controls'),
-            grid: document.getElementById('grid-controls'),
-            blockBg: document.getElementById('block-bg-color'), 
-            blockBorder: document.getElementById('block-border-color'),
-            handleColor: document.getElementById('handle-color'),
-            handleVisible: document.getElementById('handle-visible'),
-            textColor: document.getElementById('text-color'), 
-            textSize: document.getElementById('text-size'),
-            textFont: document.getElementById('text-font'),
-            linkSrc: document.getElementById('link-src'),
-            arrowColor: document.getElementById('arrow-color'), 
-            arrowWidth: document.getElementById('arrow-width'),
-            arrowHeadSize: document.getElementById('arrow-head-size'),
-            gridBg: document.getElementById('grid-bg-color'), 
-            gridLines: document.getElementById('grid-line-color'),
-            boldBtn: document.getElementById('bold-btn'),
-            italicBtn: document.getElementById('italic-btn'),
-            underlineBtn: document.getElementById('underline-btn'),
-        };
+            grid: document.getElementById('grid-controls')
+        }
 
-        customizePanel.querySelector('.panel-close-btn').addEventListener('click', () => customizePanel.style.display = 'none');
-        
         function updateCustomizePanel() {
             const hasBlock = selection.some(item => item.classList.contains('block'));
             const hasArrow = selection.some(item => item.classList.contains('arrow-group'));
             const lastSelectedBlock = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : selection.find(i => i.classList.contains('block'));
             const hasIframe = lastSelectedBlock?.querySelector('iframe');
             
-            customizeInputs.block.classList.toggle('hidden', !hasBlock);
-            customizeInputs.handle.classList.toggle('hidden', !hasBlock);
-            customizeInputs.arrow.classList.toggle('hidden', !hasArrow);
-            customizeInputs.grid.classList.toggle('hidden', hasBlock || hasArrow);
+            controlGroups.block.classList.toggle('hidden', !hasBlock);
+            controlGroups.handle.classList.toggle('hidden', !hasBlock);
+            controlGroups.arrow.classList.toggle('hidden', !hasArrow);
+            controlGroups.grid.classList.toggle('hidden', hasBlock || hasArrow);
             
-            customizeInputs.text.classList.toggle('hidden', !hasBlock || hasIframe);
-            customizeInputs.link.classList.toggle('hidden', !hasIframe);
+            controlGroups.text.classList.toggle('hidden', !hasBlock || hasIframe);
+            controlGroups.link.classList.toggle('hidden', !hasIframe);
 
             if (hasBlock && lastSelectedBlock) {
                 const computed = getComputedStyle(lastSelectedBlock);
-                customizeInputs.blockBg.value = rgbToHex(computed.backgroundColor); 
-                customizeInputs.blockBorder.value = rgbToHex(computed.borderColor);
+                customizeInputs.blockBg.setColor(computed.backgroundColor, true); 
+                customizeInputs.blockBorder.setColor(computed.borderColor, true);
                 
                 const handleColor = computed.getPropertyValue('--handle-color').trim();
-                customizeInputs.handleColor.value = handleColor ? rgbToHex(handleColor) : '#808080';
-                customizeInputs.handleVisible.checked = computed.getPropertyValue('--handle-display').trim() !== 'none';
+                customizeInputs.handle.setColor(handleColor || '#808080', true);
+                nonColorInputs.handleVisible.checked = computed.getPropertyValue('--handle-display').trim() !== 'none';
 
                 if (hasIframe) {
-                    customizeInputs.linkSrc.value = hasIframe.src;
+                    nonColorInputs.linkSrc.value = hasIframe.src;
                 } else {
                     const content = lastSelectedBlock.querySelector('.block-content');
                     const computedContent = getComputedStyle(content);
-                    customizeInputs.textColor.value = rgbToHex(computedContent.color); 
-                    customizeInputs.textSize.value = parseInt(computedContent.fontSize);
-                    const fontOption = Array.from(customizeInputs.textFont.options).find(opt => opt.value === computedContent.fontFamily);
-                    customizeInputs.textFont.value = fontOption ? fontOption.value : customizeInputs.textFont.options[0].value;
+                    customizeInputs.text.setColor(computedContent.color, true); 
+                    nonColorInputs.textSize.value = parseInt(computedContent.fontSize);
+                    const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => opt.value === computedContent.fontFamily);
+                    nonColorInputs.textFont.value = fontOption ? fontOption.value : nonColorInputs.textFont.options[0].value;
                 }
             }
             if (hasArrow) {
                 const arrowToSample = lastSelectedItem?.classList.contains('arrow-group') ? lastSelectedItem : selection.find(i => i.classList.contains('arrow-group'));
                 if (arrowToSample) {
                     const arrowLine = arrowToSample.querySelector('.arrow-line');
-                    customizeInputs.arrowColor.value = rgbToHex(arrowLine.getAttribute('stroke') || '#000000');
-                    customizeInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
-                    customizeInputs.arrowHeadSize.value = arrowToSample.dataset.headSize || 10;
+                    customizeInputs.arrow.setColor(arrowLine.getAttribute('stroke') || '#000000', true);
+                    nonColorInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
+                    nonColorInputs.arrowHeadSize.value = arrowToSample.dataset.headSize || 10;
                 }
             }
         }
@@ -1655,54 +1703,162 @@
             element.addEventListener('mousedown', (e) => {
                 e.preventDefault(); 
                 formatText(command);
+                recordState();
             });
         };
 
-        addFormattingButtonListener(customizeInputs.boldBtn, 'bold');
-        addFormattingButtonListener(customizeInputs.italicBtn, 'italic');
-        addFormattingButtonListener(customizeInputs.underlineBtn, 'underline');
+        addFormattingButtonListener(nonColorInputs.boldBtn, 'bold');
+        addFormattingButtonListener(nonColorInputs.italicBtn, 'italic');
+        addFormattingButtonListener(nonColorInputs.underlineBtn, 'underline');
         
-        customizeInputs.blockBg.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.backgroundColor = e.target.value; }); });
-        customizeInputs.blockBorder.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.borderColor = e.target.value; }); });
-        
-        customizeInputs.handleColor.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.setProperty('--handle-color', e.target.value); }); });
-        customizeInputs.handleVisible.addEventListener('change', e => { selection.forEach(item => { if (item.classList.contains('block')) item.style.setProperty('--handle-display', e.target.checked ? 'block' : 'none'); }); });
-        
-        customizeInputs.textColor.addEventListener('input', e => formatText('foreColor', e.target.value));
-        customizeInputs.textSize.addEventListener('change', e => formatText('fontSize', e.target.value));
-        customizeInputs.textFont.addEventListener('change', e => formatText('fontName', e.target.value));
-        customizeInputs.linkSrc.addEventListener('change', e => {
-            selection.forEach(item => {
-                const iframe = item.querySelector('iframe');
-                if (iframe) iframe.src = e.target.value;
-            });
+        nonColorInputs.handleVisible.addEventListener('change', e => {
+            const value = e.target.checked ? 'block' : 'none';
+            selection.forEach(i => i.classList.contains('block') && i.style.setProperty('--handle-display', value));
+            recordState();
+        });
+        ['textSize', 'textFont', 'linkSrc', 'arrowWidth', 'arrowHeadSize'].forEach(key => {
+            nonColorInputs[key].addEventListener('change', () => recordState());
         });
 
-        customizeInputs.arrowColor.addEventListener('input', e => { 
-            selection.forEach(item => { 
-                if (item.classList.contains('arrow-group')) { 
-                    item.querySelector('.arrow-line').setAttribute('stroke', e.target.value); 
-                    updateSingleArrow(item); 
-                } 
-            }); 
-        });
-        customizeInputs.arrowWidth.addEventListener('input', e => { selection.forEach(item => { if (item.classList.contains('arrow-group')) item.querySelector('.arrow-line').setAttribute('stroke-width', e.target.value); }); });
-        customizeInputs.arrowHeadSize.addEventListener('input', e => {
-            const newSize = parseFloat(e.target.value);
-            selection.forEach(item => {
-                if (item.classList.contains('arrow-group')) {
-                    item.dataset.headSize = newSize;
-                    updateSingleArrow(item);
-                }
+        function initializeColorPickers() {
+            const pickerConfig = (el, defaultColor) => ({
+                el, theme: 'classic', default: defaultColor,
+                swatches: [
+                    '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
+                    '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39',
+                    '#ffeb3b', '#ffc107', '#ff9800', '#795548', '#9e9e9e', '#607d8b'
+                ],
+                components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, save: true, clear: true } }
             });
-        });
-        customizeInputs.gridBg.addEventListener('input', e => { document.body.style.background = e.target.value; });
-        customizeInputs.gridLines.addEventListener('input', e => {
-            const color = e.target.value;
-            grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`;
-        });
+
+            const pickers = {
+                blockBg: Pickr.create(pickerConfig('#block-bg-color', '#ffffff')),
+                blockBorder: Pickr.create(pickerConfig('#block-border-color', '#000000')),
+                handle: Pickr.create(pickerConfig('#handle-color', '#808080')),
+                text: Pickr.create(pickerConfig('#text-color', '#333333')),
+                arrow: Pickr.create(pickerConfig('#arrow-color', '#3498db')),
+                gridBg: Pickr.create(pickerConfig('#grid-bg-color', '#203a43')),
+                gridLines: Pickr.create(pickerConfig('#grid-line-color', '#ffffff1a'))
+            };
+            
+            const addPickerListeners = (p) => {
+                p.on('show', instance => { activePicker = instance; })
+                 .on('hide', () => { activePicker = null; });
+            };
+
+            pickers.blockBg.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && (item.style.backgroundColor = c.toRGBA().toString())); recordState(); });
+            pickers.blockBorder.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && (item.style.borderColor = c.toRGBA().toString())); recordState(); });
+            pickers.handle.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && item.style.setProperty('--handle-color', c.toRGBA().toString())); recordState(); });
+            pickers.text.on('save', (c, i) => { i.hide(); formatText('foreColor', c.toRGBA().toString()); recordState(); });
+            pickers.arrow.on('save', (c, i) => { i.hide(); selection.forEach(item => { if (item.classList.contains('arrow-group')) { item.querySelector('.arrow-line').setAttribute('stroke', c.toRGBA().toString()); updateSingleArrow(item); }}); recordState(); });
+            pickers.gridBg.on('save', (c, i) => { i.hide(); document.body.style.background = c.toRGBA().toString(); recordState(); });
+            pickers.gridLines.on('save', (c, i) => { i.hide(); grid.style.backgroundImage = `linear-gradient(${c.toRGBA().toString()} 1px, transparent 1px), linear-gradient(90deg, ${c.toRGBA().toString()} 1px, transparent 1px)`; recordState(); });
+
+            Object.values(pickers).forEach(addPickerListeners);
+            customizeInputs = { ...customizeInputs, ...pickers };
+        }
         
-        // --- Page Management Logic ---
+        function showSmartColorPicker() {
+            const tempEl = document.createElement('div');
+            tempEl.style.position = 'fixed';
+            const xPos = lastMouseX || window.innerWidth / 2;
+            const yPos = lastMouseY || window.innerHeight / 2;
+            tempEl.style.left = `${xPos}px`;
+            tempEl.style.top = `${yPos}px`;
+            tempEl.style.width = '1px';
+            tempEl.style.height = '1px';
+            document.body.appendChild(tempEl);
+
+            const picker = Pickr.create({
+                el: tempEl, theme: 'classic',
+                default: '#333',
+                position: 'bottom-middle',
+                components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, save: true } }
+            });
+
+            let saveAction = () => {};
+            let initialColor = '#ffffff';
+
+            if (isEditing && activeEditingElement) {
+                initialColor = window.getComputedStyle(activeEditingElement).color;
+                saveAction = (c) => formatText('foreColor', c.toRGBA().toString());
+            } else if (lastSelectedItem?.classList.contains('block')) {
+                initialColor = window.getComputedStyle(lastSelectedItem).backgroundColor;
+                saveAction = (c) => selection.forEach(i => i.classList.contains('block') && (i.style.backgroundColor = c.toRGBA().toString()));
+            } else if (lastSelectedItem?.classList.contains('arrow-group')) {
+                initialColor = lastSelectedItem.querySelector('.arrow-line').getAttribute('stroke');
+                saveAction = (c) => selection.forEach(i => { if (i.classList.contains('arrow-group')) { i.querySelector('.arrow-line').setAttribute('stroke', c.toRGBA().toString()); updateSingleArrow(i); } });
+            } else {
+                initialColor = window.getComputedStyle(document.body).backgroundColor;
+                saveAction = (c) => document.body.style.background = c.toRGBA().toString();
+            }
+            
+            picker.setColor(initialColor);
+            picker.on('save', (color, instance) => {
+                saveAction(color);
+                recordState();
+                instance.hide();
+            }).on('hide', (instance) => {
+                activePicker = null;
+                instance.destroyAndRemove();
+            }).on('show', (color, instance) => {
+                activePicker = instance;
+                setTimeout(() => {
+                    const pickerApp = instance.getRoot().app;
+                    const pickerRect = pickerApp.getBoundingClientRect();
+                    let newLeft = xPos;
+                    let newTop = yPos + 15;
+                    if (newLeft + pickerRect.width > window.innerWidth) {
+                        newLeft = window.innerWidth - pickerRect.width - 5;
+                    }
+                    if (newTop + pickerRect.height > window.innerHeight) {
+                        newTop = yPos - pickerRect.height - 15;
+                    }
+                    pickerApp.style.left = `${newLeft}px`;
+                    pickerApp.style.top = `${newTop}px`;
+                }, 0);
+            });
+
+            picker.show();
+        }
+
+        function recordState() {
+            saveCurrentPageState(); 
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            const state = {
+                pages: JSON.parse(JSON.stringify(pages)),
+                currentPageIndex: currentPageIndex
+            };
+            history.push(state);
+            if (history.length > MAX_HISTORY_STATES) {
+                history.shift();
+            }
+            historyIndex = history.length - 1;
+        }
+
+        function loadState(state) {
+            if (!state) return;
+            pages = JSON.parse(JSON.stringify(state.pages));
+            currentPageIndex = state.currentPageIndex;
+            loadPage(currentPageIndex, true);
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                loadState(history[historyIndex]);
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                loadState(history[historyIndex]);
+            }
+        }
+
         function saveCurrentPageState() {
             if (pages.length === 0 || currentPageIndex < 0) return;
             pages[currentPageIndex] = {
@@ -1738,7 +1894,7 @@
         }
 
         function loadPage(index, isFirstLoad = false) {
-            if (!isFirstLoad) {
+            if (!isFirstLoad && currentPageIndex >= 0) {
                 saveCurrentPageState();
             }
             if (index < 0 || index >= pages.length) return;
@@ -1810,6 +1966,7 @@
             };
             pages.push(newPage);
             loadPage(pages.length - 1);
+            recordState();
             showToast(`Page ${pages.length} added`);
         }
 
@@ -1818,12 +1975,20 @@
                 showToast("Cannot delete the last page.");
                 return;
             }
-            const deletedPageIndex = currentPageIndex + 1;
-            pages.splice(currentPageIndex, 1);
-            
-            const newIndex = Math.min(currentPageIndex, pages.length - 1);
-            loadPage(newIndex);
-            showToast(`Page ${deletedPageIndex} deleted`);
+            const pageHasContent = pages[currentPageIndex] && pages[currentPageIndex].blocks.length > 0;
+            let confirmed = true;
+            if (pageHasContent) {
+                confirmed = window.confirm("This slide has content. Are you sure you want to delete it?");
+            }
+
+            if (confirmed) {
+                const deletedPageIndex = currentPageIndex + 1;
+                pages.splice(currentPageIndex, 1);
+                const newIndex = Math.min(currentPageIndex, pages.length - 1);
+                loadPage(newIndex, true); 
+                recordState();
+                showToast(`Page ${deletedPageIndex} deleted`);
+            }
         }
         
         function goToNextPage() {
@@ -1844,7 +2009,7 @@
 
                     const wasEmpty = pages.length === 1 && pages[0].blocks.length === 0;
                     if (wasEmpty) {
-                        pages.shift(); // Remove the empty initial page
+                        pages.shift();
                     } else {
                         saveCurrentPageState();
                     }
@@ -1853,7 +2018,18 @@
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({ scale: 1.5 });
+                        
+                        const availableWidth = container.clientWidth * 0.85;
+                        const availableHeight = container.clientHeight * 0.85;
+                        const unscaledViewport = page.getViewport({ scale: 1.0 });
+                        const scaleX = availableWidth / unscaledViewport.width;
+                        const scaleY = availableHeight / unscaledViewport.height;
+                        const optimalScale = Math.min(scaleX, scaleY);
+                        const viewport = page.getViewport({ scale: optimalScale });
+
+                        const gridCenter = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
+                        const blockX = Math.max(0, gridCenter.x - viewport.width / 2);
+                        const blockY = Math.max(0, gridCenter.y - viewport.height / 2);
                         
                         const canvas = document.createElement('canvas');
                         const context = canvas.getContext('2d');
@@ -1867,8 +2043,8 @@
 
                         const newPage = {
                             blocks: [{
-                                x: 100,
-                                y: 100,
+                                x: blockX,
+                                y: blockY,
                                 width: `${viewport.width}px`,
                                 height: `${viewport.height}px`,
                                 htmlContent: htmlContent,
@@ -1885,6 +2061,7 @@
                     }
 
                     loadPage(importStartIndex, true);
+                    recordState();
                     showToast(`Successfully imported ${pdf.numPages} slides.`, 3000);
                 } catch (error) {
                     console.error('Error importing PDF:', error);
@@ -1913,9 +2090,12 @@
                     if (loadedData.pages && Array.isArray(loadedData.pages)) {
                         pages = loadedData.pages;
                     } else {
-                        pages = [loadedData]; // Backward compatibility
+                        pages = [loadedData];
                     }
                     loadPage(0, true);
+                    history = [];
+                    historyIndex = -1;
+                    recordState();
                 } catch (err) {
                     console.error('Error parsing JSON:', err);
                     showToast('Failed to load file. It may be corrupted.');
@@ -1969,6 +2149,7 @@
 
             deselectAll();
             newSelection.forEach(item => updateSelection(item, true));
+            recordState();
         }
 
         function createArrow(arrowData) {
@@ -2059,7 +2240,6 @@
             document.body.removeChild(element);
         }
 
-        // --- Start the application ---
         initialize();
     });
 </script>
