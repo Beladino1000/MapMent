@@ -17,7 +17,7 @@
         body {
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            background: #000000;
             height: 100vh;
             width: 100vw;
             display: flex;
@@ -47,8 +47,8 @@
             left: 0;
             top: 0;
             background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+                linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
             background-size: 30px 30px;
             background-position: top left;
             transform-origin: top left;
@@ -93,7 +93,7 @@
             padding: 15px;
             cursor: grab;
             overflow: visible;
-            transition: border-color 0.3s, box-shadow 0.3s;
+            transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
             user-select: none;
             z-index: 10;
             resize: none;
@@ -379,6 +379,12 @@
         }
         .control-btn.active { background: #e74c3c; }
         .control-btn:hover { background: #3498db; }
+        .control-btn:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+        }
+
 
         .control-group { margin-bottom: 15px; }
         .control-group label {
@@ -400,8 +406,10 @@
         .format-btn {
             flex: 1; background: #555; border: 1px solid #666;
             color: white; padding: 5px; border-radius: 4px; cursor: pointer;
+            transition: background-color 0.2s;
         }
         .format-btn:hover { background: #666; }
+        .format-btn.active { background-color: #3498db; }
         .hidden { display: none !important; }
 
         /* Custom Color Picker Theme */
@@ -483,7 +491,7 @@
                         <button id="italic-btn" class="format-btn"><i>I</i></button>
                         <button id="underline-btn" class="format-btn"><u>U</u></button>
                     </div>
-                    <label><span>Color</span><div class="color-picker-wrapper" id="text-color"></div></label><label><span>Size (px)</span><input type="number" id="text-size" min="8" max="48" step="1"></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
+                    <label><span>Color</span><div class="color-picker-wrapper" id="text-color"></div></label><label><span>Size (px)</span><input type="number" id="text-size" min="8" max="72" step="1"></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
                 </div>
                 <div id="link-controls" class="control-group hidden">
                     <h5>Embed Link</h5>
@@ -494,6 +502,13 @@
                     <label><span>Color</span><div class="color-picker-wrapper" id="arrow-color"></div></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label><label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
                 </div>
                 <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" id="grid-bg-color"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" id="grid-line-color"></div></label></div>
+                <div class="control-group">
+                    <h5>Color Palette</h5>
+                    <div class="actions-grid">
+                        <button class="control-btn" id="add-swatch-btn" title="Adds the selected block's background color to your palette">🎨 Add to Palette</button>
+                        <button class="control-btn" id="clear-swatches-btn" title="Clears your custom palette and restores the default">🗑️ Clear Palette</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -538,6 +553,8 @@
         const deletePageBtn = document.getElementById('delete-page-btn');
         const pageDisplay = document.getElementById('page-display');
         const sidebar = document.querySelector('.sidebar');
+        const addSwatchBtn = document.getElementById('add-swatch-btn');
+        const clearSwatchesBtn = document.getElementById('clear-swatches-btn');
     
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
         let isResizing = false;
@@ -566,6 +583,7 @@
         let historyIndex = -1;
         const MAX_HISTORY_STATES = 32;
         let activePicker = null;
+        let userSwatches = [];
 
         shortcutHint.style.display = 'block';
         setTimeout(() => {
@@ -581,8 +599,8 @@
                 arrows: [],
                 viewport: { gridX: 0, gridY: 0, scale: 1 },
                 styles: { 
-                    gridBg: 'linear-gradient(135deg, rgb(15, 32, 39), rgb(32, 58, 67), rgb(44, 83, 100))',
-                    gridLines: 'linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)'
+                    gridBg: '#000000',
+                    gridLines: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)'
                 }
             };
             blockCounter = 2;
@@ -609,7 +627,7 @@
         fileLoader.addEventListener('change', (e) => { loadAllPages(e); });
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keydown', handleKeyDown, true);
         document.addEventListener('keyup', handleKeyUp);
         document.addEventListener('mousedown', handleGlobalMouseDown, true);
         container.addEventListener('mousedown', handleGridMouseDown);
@@ -629,6 +647,8 @@
         nextPageBtn.addEventListener('click', goToNextPage);
         addPageBtn.addEventListener('click', addNewPage);
         deletePageBtn.addEventListener('click', deleteCurrentPage);
+        addSwatchBtn.addEventListener('click', handleAddSwatch);
+        clearSwatchesBtn.addEventListener('click', handleClearSwatches);
 
 
         document.addEventListener('selectionchange', () => {
@@ -638,6 +658,7 @@
                     const range = selection.getRangeAt(0);
                     if (activeEditingElement.contains(range.commonAncestorContainer)) {
                         savedSelectionRange = range.cloneRange();
+                        updateTextControlsOnSelectionChange();
                     }
                 }
             }
@@ -752,6 +773,9 @@
                     finishEditing(block);
                 }
             });
+
+            contentEl.addEventListener('keyup', updateTextControlsOnSelectionChange);
+            contentEl.addEventListener('mouseup', updateTextControlsOnSelectionChange);
             
             new ResizeObserver(() => updateArrowsForBlock(block)).observe(block);
             return block;
@@ -910,19 +934,14 @@
             if (activePicker) {
                 const pickerApp = activePicker.getRoot().app;
                 const isClickOnPickerButton = activePicker.getRoot().button.contains(e.target);
-                const isClickInsideSidebar = sidebar.contains(e.target);
-
-                if (!pickerApp.contains(e.target) && !isClickOnPickerButton && !isClickInsideSidebar) {
+                
+                if (!pickerApp.contains(e.target) && !isClickOnPickerButton) {
                     activePicker.hide();
                 }
             }
             if (isEditing && activeEditingElement) {
                 const currentBlock = activeEditingElement.closest('.block');
-                const isClickInsideBlock = currentBlock.contains(e.target);
-                const isClickInsideSidebar = sidebar.contains(e.target);
-                const isClickInsidePicker = e.target.closest('.pcr-app');
-                
-                if (!isClickInsideBlock && !isClickInsideSidebar && !isClickInsidePicker) {
+                if (!currentBlock.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('.pcr-app')) {
                     finishEditing(currentBlock);
                 }
             }
@@ -1114,11 +1133,6 @@
         }
 
         function handleKeyDown(e) {
-            if (activePicker && e.key === 'Enter') {
-                e.preventDefault();
-                activePicker.emit('save', activePicker.getColor());
-                return;
-            }
             if (isEditing && e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
                 return; 
             }
@@ -1235,6 +1249,7 @@
                 contentEl.contentEditable = true;
                 contentEl.focus();
                 updateCustomizePanel();
+                updateTextControlsOnSelectionChange();
             }
         }
 
@@ -1635,6 +1650,7 @@
             const lastSelectedBlock = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : selection.find(i => i.classList.contains('block'));
             const hasIframe = lastSelectedBlock?.querySelector('iframe');
             
+            addSwatchBtn.disabled = !hasBlock;
             controlGroups.block.classList.toggle('hidden', !hasBlock);
             controlGroups.handle.classList.toggle('hidden', !hasBlock);
             controlGroups.arrow.classList.toggle('hidden', !hasArrow);
@@ -1645,61 +1661,43 @@
 
             if (hasBlock && lastSelectedBlock) {
                 const computed = getComputedStyle(lastSelectedBlock);
-                customizeInputs.blockBg.setColor(computed.backgroundColor, true); 
-                customizeInputs.blockBorder.setColor(computed.borderColor, true);
+                if (customizeInputs.blockBg) customizeInputs.blockBg.setColor(computed.backgroundColor, true); 
+                if (customizeInputs.blockBorder) customizeInputs.blockBorder.setColor(computed.borderColor, true);
                 
                 const handleColor = computed.getPropertyValue('--handle-color').trim();
-                customizeInputs.handle.setColor(handleColor || '#808080', true);
+                if (customizeInputs.handle) customizeInputs.handle.setColor(handleColor || '#808080', true);
                 nonColorInputs.handleVisible.checked = computed.getPropertyValue('--handle-display').trim() !== 'none';
 
                 if (hasIframe) {
                     nonColorInputs.linkSrc.value = hasIframe.src;
-                } else {
-                    const content = lastSelectedBlock.querySelector('.block-content');
-                    const computedContent = getComputedStyle(content);
-                    customizeInputs.text.setColor(computedContent.color, true); 
-                    nonColorInputs.textSize.value = parseInt(computedContent.fontSize);
-                    const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => opt.value === computedContent.fontFamily);
-                    nonColorInputs.textFont.value = fontOption ? fontOption.value : nonColorInputs.textFont.options[0].value;
+                } else if (isEditing) {
+                    updateTextControlsOnSelectionChange();
                 }
             }
             if (hasArrow) {
                 const arrowToSample = lastSelectedItem?.classList.contains('arrow-group') ? lastSelectedItem : selection.find(i => i.classList.contains('arrow-group'));
                 if (arrowToSample) {
                     const arrowLine = arrowToSample.querySelector('.arrow-line');
-                    customizeInputs.arrow.setColor(arrowLine.getAttribute('stroke') || '#000000', true);
+                    if (customizeInputs.arrow) customizeInputs.arrow.setColor(arrowLine.getAttribute('stroke') || '#000000', true);
                     nonColorInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
                     nonColorInputs.arrowHeadSize.value = arrowToSample.dataset.headSize || 10;
                 }
             }
         }
         
-        const formatText = (command, value = null) => {
-            if (!activeEditingElement || !savedSelectionRange) return;
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(savedSelectionRange);
-            if (['bold', 'italic', 'underline'].includes(command)) {
-                document.execCommand(command, false, value);
-            } else {
-                const range = savedSelectionRange;
-                if (!range.collapsed) {
-                    const span = document.createElement('span');
-                    if(command === 'foreColor') span.style.color = value;
-                    if(command === 'fontName') span.style.fontFamily = value;
-                    if(command === 'fontSize') span.style.fontSize = `${value}px`;
-                    
-                    span.appendChild(range.extractContents());
-                    range.insertNode(span);
-                    range.selectNodeContents(span);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
+        function formatText(command, value = null) {
+            if (!isEditing) return;
+            document.execCommand(command, false, value);
+            activeEditingElement.focus();
+            if (savedSelectionRange) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(savedSelectionRange);
             }
-            if (selection.rangeCount > 0) savedSelectionRange = selection.getRangeAt(0).cloneRange();
+            updateTextControlsOnSelectionChange();
         };
 
-        const addFormattingButtonListener = (element, command) => {
+        function addFormattingButtonListener(element, command) {
             element.addEventListener('mousedown', (e) => {
                 e.preventDefault(); 
                 formatText(command);
@@ -1711,23 +1709,70 @@
         addFormattingButtonListener(nonColorInputs.italicBtn, 'italic');
         addFormattingButtonListener(nonColorInputs.underlineBtn, 'underline');
         
+        nonColorInputs.textSize.addEventListener('input', e => {
+            document.execCommand('fontSize', false, '1');
+            const fontElements = activeEditingElement.getElementsByTagName('font');
+            for (let i = 0, len = fontElements.length; i < len; ++i) {
+                if (fontElements[i].size == "1") {
+                    fontElements[i].removeAttribute("size");
+                    fontElements[i].style.fontSize = e.target.value + "px";
+                }
+            }
+            recordState();
+        });
+        
+        nonColorInputs.textFont.addEventListener('input', e => formatText('fontName', e.target.value));
         nonColorInputs.handleVisible.addEventListener('change', e => {
             const value = e.target.checked ? 'block' : 'none';
             selection.forEach(i => i.classList.contains('block') && i.style.setProperty('--handle-display', value));
             recordState();
         });
-        ['textSize', 'textFont', 'linkSrc', 'arrowWidth', 'arrowHeadSize'].forEach(key => {
+        ['linkSrc', 'arrowWidth', 'arrowHeadSize'].forEach(key => {
             nonColorInputs[key].addEventListener('change', () => recordState());
         });
 
+        function updateTextControlsOnSelectionChange() {
+            if (!isEditing || !activeEditingElement) return;
+
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return;
+
+            let parentEl = selection.getRangeAt(0).commonAncestorContainer;
+            if (parentEl.nodeType !== 1) {
+                parentEl = parentEl.parentNode;
+            }
+            
+            const styles = window.getComputedStyle(parentEl);
+            nonColorInputs.boldBtn.classList.toggle('active', styles.fontWeight === '700' || styles.fontWeight === 'bold');
+            nonColorInputs.italicBtn.classList.toggle('active', styles.fontStyle === 'italic');
+            nonColorInputs.underlineBtn.classList.toggle('active', styles.textDecorationLine.includes('underline'));
+            
+            nonColorInputs.textSize.value = Math.round(parseFloat(styles.fontSize));
+            
+            const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => styles.fontFamily.includes(opt.value));
+            nonColorInputs.textFont.value = fontOption ? fontOption.value : nonColorInputs.textFont.options[0].value;
+            
+            if (customizeInputs.text) {
+                customizeInputs.text.setColor(styles.color, true);
+            }
+        }
+
+
         function initializeColorPickers() {
+            if (customizeInputs.blockBg) {
+                Object.values(customizeInputs).filter(p => p.setColor).forEach(p => p.destroy());
+            }
+
+            const savedSwatches = JSON.parse(localStorage.getItem('mentMapUserSwatches')) || [
+                '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
+                '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39',
+                '#ffeb3b', '#ffc107', '#ff9800', '#795548', '#9e9e9e', '#607d8b'
+            ];
+            userSwatches = [...savedSwatches];
+
             const pickerConfig = (el, defaultColor) => ({
                 el, theme: 'classic', default: defaultColor,
-                swatches: [
-                    '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
-                    '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39',
-                    '#ffeb3b', '#ffc107', '#ff9800', '#795548', '#9e9e9e', '#607d8b'
-                ],
+                swatches: userSwatches,
                 components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, save: true, clear: true } }
             });
 
@@ -1737,13 +1782,28 @@
                 handle: Pickr.create(pickerConfig('#handle-color', '#808080')),
                 text: Pickr.create(pickerConfig('#text-color', '#333333')),
                 arrow: Pickr.create(pickerConfig('#arrow-color', '#3498db')),
-                gridBg: Pickr.create(pickerConfig('#grid-bg-color', '#203a43')),
-                gridLines: Pickr.create(pickerConfig('#grid-line-color', '#ffffff1a'))
+                gridBg: Pickr.create(pickerConfig('#grid-bg-color', '#000000')),
+                gridLines: Pickr.create(pickerConfig('#grid-line-color', '#FFFFFF33'))
             };
             
             const addPickerListeners = (p) => {
-                p.on('show', instance => { activePicker = instance; })
-                 .on('hide', () => { activePicker = null; });
+                 const handleEnterKey = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const saveBtn = p.getRoot().interaction.save;
+                        saveBtn.click();
+                    }
+                };
+
+                p.on('show', instance => { 
+                    activePicker = instance; 
+                    const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
+                    inputs.forEach(input => input.addEventListener('keydown', handleEnterKey));
+                }).on('hide', (instance) => { 
+                    activePicker = null;
+                    const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
+                    inputs.forEach(input => input.removeEventListener('keydown', handleEnterKey));
+                });
             };
 
             pickers.blockBg.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && (item.style.backgroundColor = c.toRGBA().toString())); recordState(); });
@@ -1758,10 +1818,44 @@
             customizeInputs = { ...customizeInputs, ...pickers };
         }
         
+        function handleAddSwatch() {
+            const lastSelectedBlock = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : selection.find(i => i.classList.contains('block'));
+            if (!lastSelectedBlock) {
+                showToast('Please select a block to add its color.');
+                return;
+            }
+
+            const color = window.getComputedStyle(lastSelectedBlock).backgroundColor;
+            const colorStr = customizeInputs.blockBg._pcr.parseColor(color, 'hsva').toHEXA().toString();
+
+            if (userSwatches.includes(colorStr)) {
+                showToast('Color is already in the palette.');
+                return;
+            }
+
+            userSwatches.push(colorStr);
+            localStorage.setItem('mentMapUserSwatches', JSON.stringify(userSwatches));
+
+            Object.values(customizeInputs)
+                .filter(p => p.setColor)
+                .forEach(picker => picker.addSwatch(colorStr));
+
+            showToast('Color added to palette.');
+        }
+
+        function handleClearSwatches() {
+            if (confirm('Are you sure you want to clear your custom color palette? This will revert to the default palette.')) {
+                localStorage.removeItem('mentMapUserSwatches');
+                initializeColorPickers();
+                updateCustomizePanel();
+                showToast('Custom palette cleared.');
+            }
+        }
+
         function showSmartColorPicker() {
             const tempEl = document.createElement('div');
             tempEl.style.position = 'fixed';
-            const xPos = lastMouseX || window.innerWidth / 2;
+            const xPos = lastMouseX || (window.innerWidth - 300) / 2;
             const yPos = lastMouseY || window.innerHeight / 2;
             tempEl.style.left = `${xPos}px`;
             tempEl.style.top = `${yPos}px`;
@@ -1772,6 +1866,7 @@
             const picker = Pickr.create({
                 el: tempEl, theme: 'classic',
                 default: '#333',
+                swatches: userSwatches,
                 position: 'bottom-middle',
                 components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, save: true } }
             });
@@ -1781,28 +1876,41 @@
 
             if (isEditing && activeEditingElement) {
                 initialColor = window.getComputedStyle(activeEditingElement).color;
-                saveAction = (c) => formatText('foreColor', c.toRGBA().toString());
+                saveAction = (c) => { formatText('foreColor', c.toRGBA().toString()); recordState(); };
             } else if (lastSelectedItem?.classList.contains('block')) {
                 initialColor = window.getComputedStyle(lastSelectedItem).backgroundColor;
-                saveAction = (c) => selection.forEach(i => i.classList.contains('block') && (i.style.backgroundColor = c.toRGBA().toString()));
+                saveAction = (c) => { selection.forEach(i => i.classList.contains('block') && (i.style.backgroundColor = c.toRGBA().toString())); recordState(); };
             } else if (lastSelectedItem?.classList.contains('arrow-group')) {
                 initialColor = lastSelectedItem.querySelector('.arrow-line').getAttribute('stroke');
-                saveAction = (c) => selection.forEach(i => { if (i.classList.contains('arrow-group')) { i.querySelector('.arrow-line').setAttribute('stroke', c.toRGBA().toString()); updateSingleArrow(i); } });
+                saveAction = (c) => { selection.forEach(i => { if (i.classList.contains('arrow-group')) { i.querySelector('.arrow-line').setAttribute('stroke', c.toRGBA().toString()); updateSingleArrow(i); } }); recordState(); };
             } else {
                 initialColor = window.getComputedStyle(document.body).backgroundColor;
-                saveAction = (c) => document.body.style.background = c.toRGBA().toString();
+                saveAction = (c) => { document.body.style.background = c.toRGBA().toString(); recordState(); };
             }
             
             picker.setColor(initialColor);
+
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const saveBtn = picker.getRoot().interaction.save;
+                    saveBtn.click();
+                }
+            };
+
             picker.on('save', (color, instance) => {
                 saveAction(color);
-                recordState();
                 instance.hide();
             }).on('hide', (instance) => {
                 activePicker = null;
+                const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
+                inputs.forEach(input => input.removeEventListener('keydown', handleEnterKey));
                 instance.destroyAndRemove();
             }).on('show', (color, instance) => {
                 activePicker = instance;
+                const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
+                inputs.forEach(input => input.addEventListener('keydown', handleEnterKey));
                 setTimeout(() => {
                     const pickerApp = instance.getRoot().app;
                     const pickerRect = pickerApp.getBoundingClientRect();
@@ -1916,8 +2024,8 @@
             scale = state.viewport?.scale || 1;
             updateGridTransform();
 
-            document.body.style.background = state.styles?.gridBg || 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)';
-            grid.style.backgroundImage = state.styles?.gridLines || `linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`;
+            document.body.style.background = state.styles?.gridBg || '#000000';
+            grid.style.backgroundImage = state.styles?.gridLines || `linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)`;
             
             let maxId = 0;
             if (state.blocks && Array.isArray(state.blocks)) {
