@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Canvas - MentMap</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css"/>
-
     <style>
         * {
             margin: 0;
@@ -385,7 +383,6 @@
             cursor: not-allowed;
         }
 
-
         .control-group { margin-bottom: 15px; }
         .control-group label {
             display: flex;
@@ -396,6 +393,9 @@
         .color-picker-wrapper {
             width: 24px;
             height: 24px;
+            border-radius: 50%;
+            border: 1px solid #777;
+            cursor: pointer;
         }
         .control-group input[type="range"], .control-group input[type="number"], .control-group select, .control-group input[type="text"], .control-group input[type="checkbox"] {
             width: 120px;
@@ -412,18 +412,102 @@
         .format-btn.active { background-color: #3498db; }
         .hidden { display: none !important; }
 
-        /* Custom Color Picker Theme */
-        .pickr .pcr-button {
-            height: 24px;
-            width: 24px;
+        /* Custom Color Picker Styles */
+        #custom-color-picker {
+            position: fixed;
+            width: 240px;
+            background: rgba(50, 50, 50, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid #666;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 4000;
+            padding: 10px;
+            font-size: 13px;
+            color: #eee;
+        }
+        .color-picker-header {
+            padding: 5px;
+            text-align: center;
+            font-weight: bold;
+            cursor: move;
+            background: rgba(255,255,255,0.1);
+            margin: -10px -10px 10px -10px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            border-bottom: 1px solid #666;
+        }
+        .color-picker-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .color-spectrum {
+            width: 100%;
+            height: 120px;
+            position: relative;
+            cursor: crosshair;
+            background: linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(0, 100%, 50%));
+        }
+        .spectrum-cursor {
+            position: absolute;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.7);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
         }
-         .pickr .pcr-button::before {
+        .color-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 10px;
+            border-radius: 5px;
+            background: #555;
+            outline: none;
+        }
+        .hue-slider { background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red); }
+        .opacity-slider { background: linear-gradient(to right, transparent, white); }
+        .color-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: 1px solid #888;
         }
-        .pcr-app {
-            z-index: 3000;
+        .color-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 10px;
+            align-items: center;
         }
+        .color-inputs label { font-size: 12px; color: #aaa; }
+        .color-inputs input {
+            width: 100%;
+            background: #333;
+            border: 1px solid #666;
+            color: #fff;
+            border-radius: 4px;
+            padding: 4px;
+            text-align: center;
+        }
+        .color-picker-footer {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .color-picker-footer button {
+            flex: 1;
+            background: #555; color: white; border: 1px solid #777;
+            padding: 8px; border-radius: 5px; cursor: pointer;
+        }
+        .color-picker-footer button:hover { background: #666; }
+        .color-picker-footer button.confirm-btn:hover { background: #3498db; }
     </style>
 </head>
 <body>
@@ -482,8 +566,8 @@
         <div class="sidebar-section">
             <h4>Customize</h4>
             <div id="customize-content">
-                <div id="block-controls" class="control-group hidden"><h5>Block</h5><label><span>Background</span><div class="color-picker-wrapper" id="block-bg-color"></div></label><label><span>Border</span><div class="color-picker-wrapper" id="block-border-color"></div></label></div>
-                <div id="handle-controls" class="control-group hidden"><h5>Handles</h5><label><span>Color</span><div class="color-picker-wrapper" id="handle-color"></div></label><label><span>Visible</span><input type="checkbox" id="handle-visible" checked></label></div>
+                <div id="block-controls" class="control-group hidden"><h5>Block</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label><label><span>Border</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label></div>
+                <div id="handle-controls" class="control-group hidden"><h5>Handles</h5><label><span>Color</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span>Visible</span><input type="checkbox" id="handle-visible" checked></label></div>
                 <div id="text-controls" class="control-group hidden">
                     <h5>Text</h5>
                     <div class="text-format-buttons">
@@ -491,7 +575,7 @@
                         <button id="italic-btn" class="format-btn"><i>I</i></button>
                         <button id="underline-btn" class="format-btn"><u>U</u></button>
                     </div>
-                    <label><span>Color</span><div class="color-picker-wrapper" id="text-color"></div></label><label><span>Size (px)</span><select id="text-size"></select></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
+                    <label><span>Color</span><div class="color-picker-wrapper" data-color-target="text"></div></label><label><span>Size (px)</span><select id="text-size"></select></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
                 </div>
                 <div id="link-controls" class="control-group hidden">
                     <h5>Embed Link</h5>
@@ -499,9 +583,9 @@
                 </div>
                 <div id="arrow-controls" class="control-group hidden">
                     <h5>Arrow</h5>
-                    <label><span>Color</span><div class="color-picker-wrapper" id="arrow-color"></div></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label><label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
+                    <label><span>Color</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label><label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
                 </div>
-                <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" id="grid-bg-color"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" id="grid-line-color"></div></label></div>
+                <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
             </div>
         </div>
     </div>
@@ -520,9 +604,35 @@
     
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
+    <div id="custom-color-picker" class="hidden">
+        <div class="color-picker-header">Color Picker</div>
+        <div class="color-picker-body">
+            <div class="color-spectrum" id="color-spectrum">
+                <div class="spectrum-cursor" id="spectrum-cursor"></div>
+            </div>
+            <input type="range" min="0" max="360" value="0" class="color-slider hue-slider" id="hue-slider">
+            <input type="range" min="0" max="1" value="1" step="0.01" class="color-slider opacity-slider" id="opacity-slider">
+            <div class="color-inputs">
+                <label for="hex-input">HEX</label>
+                <input type="text" id="hex-input">
+                <label for="rgba-input-r">RGBA</label>
+                <div style="display: flex; gap: 2px;">
+                    <input type="number" id="rgba-input-r" min="0" max="255">
+                    <input type="number" id="rgba-input-g" min="0" max="255">
+                    <input type="number" id="rgba-input-b" min="0" max="255">
+                    <input type="number" id="rgba-input-a" min="0" max="1" step="0.1">
+                </div>
+            </div>
+        </div>
+        <div class="color-picker-footer">
+            <button id="color-picker-cancel">Cancel</button>
+            <button id="color-picker-confirm" class="confirm-btn">Confirm</button>
+        </div>
+    </div>
+
+
 <script src="https://unpkg.com/mammoth@1.5.1/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
 
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
@@ -573,8 +683,6 @@
         let history = [];
         let historyIndex = -1;
         const MAX_HISTORY_STATES = 32;
-        let activePicker = null;
-        let currentlyVisiblePicker = null;
 
         shortcutHint.style.display = 'block';
         setTimeout(() => {
@@ -933,18 +1041,17 @@
         }
 
         function handleGlobalMouseDown(e) {
-            if (activePicker) {
-                const pickerApp = activePicker.getRoot().app;
-                const isClickOnPickerButton = activePicker.getRoot().button.contains(e.target);
-                
-                if (!pickerApp.contains(e.target) && !isClickOnPickerButton) {
-                    activePicker.hide();
+            if (document.getElementById('custom-color-picker') && !document.getElementById('custom-color-picker').classList.contains('hidden')) {
+                if (!e.target.closest('#custom-color-picker') && !e.target.closest('.color-picker-wrapper')) {
+                    colorPicker.hide();
                 }
             }
             if (isEditing && activeEditingElement) {
                 const currentBlock = activeEditingElement.closest('.block');
-                if (!currentBlock.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('.pcr-app')) {
+                if (!currentBlock.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('#custom-color-picker')) {
                     finishEditing(currentBlock);
+                    e.stopPropagation();
+                    e.preventDefault();
                 }
             }
         }
@@ -1135,6 +1242,17 @@
         }
 
         function handleKeyDown(e) {
+            if (colorPicker && !colorPicker.isHidden() && e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('color-picker-confirm').click();
+                return;
+            }
+            if (colorPicker && !colorPicker.isHidden() && e.key === 'Escape') {
+                e.preventDefault();
+                document.getElementById('color-picker-cancel').click();
+                return;
+            }
+
             if (isEditing && e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
                 return; 
             }
@@ -1650,7 +1768,6 @@
             }, 0);
         }
 
-        let customizeInputs = {}; 
         const nonColorInputs = {
             handleVisible: document.getElementById('handle-visible'),
             textSize: document.getElementById('text-size'),
@@ -1687,34 +1804,43 @@
 
             if (hasBlock && lastSelectedBlock) {
                 const computed = getComputedStyle(lastSelectedBlock);
-                if (customizeInputs.blockBg) customizeInputs.blockBg.setColor(computed.backgroundColor, true); 
-                if (customizeInputs.blockBorder) customizeInputs.blockBorder.setColor(computed.borderColor, true);
+                document.querySelector('[data-color-target="blockBg"]').style.background = computed.backgroundColor;
+                document.querySelector('[data-color-target="blockBorder"]').style.background = computed.borderColor;
+                document.querySelector('[data-color-target="handle"]').style.background = computed.getPropertyValue('--handle-color').trim() || '#808080';
                 
-                const handleColor = computed.getPropertyValue('--handle-color').trim();
-                if (customizeInputs.handle) customizeInputs.handle.setColor(handleColor || '#808080', true);
                 nonColorInputs.handleVisible.checked = computed.getPropertyValue('--handle-display').trim() !== 'none';
 
                 if (hasIframe) {
                     nonColorInputs.linkSrc.value = hasIframe.src;
-                } else if (isEditing) {
-                    updateTextControlsOnSelectionChange();
+                } else {
+                    const contentStyle = getComputedStyle(lastSelectedBlock.querySelector('.block-content'));
+                    document.querySelector('[data-color-target="text"]').style.background = contentStyle.color;
+                    if (isEditing) updateTextControlsOnSelectionChange();
                 }
             }
             if (hasArrow) {
                 const arrowToSample = lastSelectedItem?.classList.contains('arrow-group') ? lastSelectedItem : selection.find(i => i.classList.contains('arrow-group'));
                 if (arrowToSample) {
                     const arrowLine = arrowToSample.querySelector('.arrow-line');
-                    if (customizeInputs.arrow) customizeInputs.arrow.setColor(arrowLine.getAttribute('stroke') || '#000000', true);
+                    const color = arrowLine.getAttribute('stroke') || '#000000';
+                    document.querySelector('[data-color-target="arrow"]').style.background = color;
                     nonColorInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
                     nonColorInputs.arrowHeadSize.value = arrowToSample.dataset.headSize || 10;
                 }
             }
+
+            document.querySelector('[data-color-target="gridBg"]').style.background = document.body.style.background;
+            // This is a simplification for grid line color swatch
+            document.querySelector('[data-color-target="gridLines"]').style.background = 'rgba(255,255,255,0.2)';
+
         }
         
         function formatText(command, value = null) {
             if (!isEditing) return;
             restoreEditorSelection();
+            document.execCommand("styleWithCSS", false, true);
             document.execCommand(command, false, value);
+            activeEditingElement.focus();
             saveEditorSelection();
             updateTextControlsOnSelectionChange();
         };
@@ -1732,16 +1858,30 @@
         addFormattingButtonListener(nonColorInputs.underlineBtn, 'underline');
         
         nonColorInputs.textSize.addEventListener('change', e => {
+            if (!isEditing) return;
             restoreEditorSelection();
-            document.execCommand('fontSize', false, '1');
-            const fontElements = activeEditingElement.getElementsByTagName('font');
-            for (let i = 0, len = fontElements.length; i < len; ++i) {
-                if (fontElements[i].size == "1") {
-                    fontElements[i].removeAttribute("size");
-                    fontElements[i].style.fontSize = e.target.value + "px";
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                if (!range.collapsed) {
+                    const contents = range.extractContents();
+                    const elements = contents.querySelectorAll('span[style*="font-size"]');
+                    elements.forEach(el => {
+                        el.style.fontSize = '';
+                        if (!el.style.length) el.removeAttribute('style');
+                    });
+                    contents.querySelectorAll('font[size]').forEach(el => el.replaceWith(...el.childNodes));
+                    const span = document.createElement('span');
+                    span.style.fontSize = e.target.value + 'px';
+                    span.appendChild(contents);
+                    range.insertNode(span);
+                    selection.removeAllRanges();
+                    range.selectNodeContents(span);
+                    selection.addRange(range);
                 }
             }
             saveEditorSelection();
+            updateTextControlsOnSelectionChange();
             recordState();
         });
         
@@ -1806,176 +1946,71 @@
             const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => styles.fontFamily.includes(opt.value));
             nonColorInputs.textFont.value = fontOption ? fontOption.value : nonColorInputs.textFont.options[0].value;
             
-            if (customizeInputs.text) {
-                customizeInputs.text.setColor(styles.color, true);
-            }
+            document.querySelector('[data-color-target="text"]').style.background = styles.color;
         }
 
+        let colorPicker = null;
         function initializeColorPickers() {
-            if (customizeInputs.blockBg) {
-                Object.values(customizeInputs).filter(p => p.setColor).forEach(p => p.destroy());
-            }
+            colorPicker = createColorPicker();
+            document.querySelectorAll('.color-picker-wrapper').forEach(wrapper => {
+                wrapper.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const targetType = wrapper.dataset.colorTarget;
+                    let initialColor = 'rgba(255, 255, 255, 1)';
+                    // Logic to get initial color based on selection
+                    try {
+                        initialColor = wrapper.style.backgroundColor || 'rgba(255,255,255,1)';
+                    } catch(e) {}
 
-            const defaultSwatches = [
-                '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
-                '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39',
-                '#ffeb3b', '#ffc107', '#ff9800', '#795548', '#9e9e9e', '#607d8b'
-            ];
-
-            const pickerConfig = (el, defaultColor) => ({
-                el, theme: 'classic', default: defaultColor,
-                swatches: defaultSwatches,
-                components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, save: true, clear: true } }
-            });
-
-            const pickers = {
-                blockBg: Pickr.create(pickerConfig('#block-bg-color', '#ffffff')),
-                blockBorder: Pickr.create(pickerConfig('#block-border-color', '#000000')),
-                handle: Pickr.create(pickerConfig('#handle-color', '#808080')),
-                text: Pickr.create(pickerConfig('#text-color', '#333333')),
-                arrow: Pickr.create(pickerConfig('#arrow-color', '#3498db')),
-                gridBg: Pickr.create(pickerConfig('#grid-bg-color', '#000000')),
-                gridLines: Pickr.create(pickerConfig('#grid-line-color', '#FFFFFF33'))
-            };
-
-            const manageSinglePickerVisibility = (p) => {
-                p.on('show', instance => {
-                    if (currentlyVisiblePicker && currentlyVisiblePicker !== instance) {
-                        currentlyVisiblePicker.hide();
-                    }
-                    currentlyVisiblePicker = instance;
-                    activePicker = instance;
-                }).on('hide', instance => {
-                    if (currentlyVisiblePicker === instance) {
-                        currentlyVisiblePicker = null;
-                    }
-                    if(activePicker === instance) activePicker = null;
+                    colorPicker.show(initialColor, (newColor) => {
+                        handleColorConfirm(targetType, newColor);
+                    });
+                    
+                    const rect = wrapper.getBoundingClientRect();
+                    colorPicker.setPosition(rect.left - 250, rect.top);
                 });
-            };
-            
-            const addPickerListeners = (p) => {
-                 const handleEnterKey = (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const saveBtn = p.getRoot().interaction.save;
-                        saveBtn.click();
-                    }
-                };
-
-                p.on('show', instance => { 
-                    const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
-                    inputs.forEach(input => input.addEventListener('keydown', handleEnterKey));
-                }).on('hide', (instance) => { 
-                    const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
-                    inputs.forEach(input => input.removeEventListener('keydown', handleEnterKey));
-                });
-            };
-
-            pickers.blockBg.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && (item.style.backgroundColor = c.toRGBA().toString())); recordState(); });
-            pickers.blockBorder.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && (item.style.borderColor = c.toRGBA().toString())); recordState(); });
-            pickers.handle.on('save', (c, i) => { i.hide(); selection.forEach(item => item.classList.contains('block') && item.style.setProperty('--handle-color', c.toRGBA().toString())); recordState(); });
-            pickers.text.on('save', (c, i) => { i.hide(); formatText('foreColor', c.toRGBA().toString()); recordState(); });
-            pickers.arrow.on('save', (c, i) => { i.hide(); selection.forEach(item => { if (item.classList.contains('arrow-group')) { item.querySelector('.arrow-line').setAttribute('stroke', c.toRGBA().toString()); updateSingleArrow(item); }}); recordState(); });
-            pickers.gridBg.on('save', (c, i) => { i.hide(); document.body.style.background = c.toRGBA().toString(); recordState(); });
-            pickers.gridLines.on('save', (c, i) => { i.hide(); grid.style.backgroundImage = `linear-gradient(${c.toRGBA().toString()} 1px, transparent 1px), linear-gradient(90deg, ${c.toRGBA().toString()} 1px, transparent 1px)`; recordState(); });
-            
-            Object.values(pickers).forEach(p => {
-                manageSinglePickerVisibility(p);
-                addPickerListeners(p);
-            });
-            customizeInputs = { ...customizeInputs, ...pickers };
-            
-            const textControlsToPreventBlur = [
-                nonColorInputs.boldBtn, nonColorInputs.italicBtn, nonColorInputs.underlineBtn,
-                customizeInputs.text.getRoot().button
-            ];
-            textControlsToPreventBlur.forEach(control => {
-                control.addEventListener('mousedown', e => e.preventDefault());
             });
         }
         
+        function handleColorConfirm(targetType, color) {
+            const actions = {
+                'blockBg': () => selection.forEach(item => item.classList.contains('block') && (item.style.backgroundColor = color)),
+                'blockBorder': () => selection.forEach(item => item.classList.contains('block') && (item.style.borderColor = color)),
+                'handle': () => selection.forEach(item => item.classList.contains('block') && item.style.setProperty('--handle-color', color)),
+                'text': () => formatText('foreColor', color),
+                'arrow': () => selection.forEach(item => { if (item.classList.contains('arrow-group')) { item.querySelector('.arrow-line').setAttribute('stroke', color); updateSingleArrow(item); }}),
+                'gridBg': () => document.body.style.background = color,
+                'gridLines': () => grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`
+            };
+
+            if (actions[targetType]) {
+                actions[targetType]();
+                recordState();
+                updateCustomizePanel();
+            }
+        }
+
         function showSmartColorPicker() {
-            const tempEl = document.createElement('div');
-            tempEl.style.position = 'fixed';
-            const xPos = lastMouseX || (window.innerWidth - 300) / 2;
-            const yPos = lastMouseY || window.innerHeight / 2;
-            tempEl.style.left = `${xPos}px`;
-            tempEl.style.top = `${yPos}px`;
-            tempEl.style.width = '1px';
-            tempEl.style.height = '1px';
-            document.body.appendChild(tempEl);
-
-            const picker = Pickr.create({
-                el: tempEl, theme: 'classic',
-                default: '#333',
-                swatches: [
-                    '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3',
-                    '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39'
-                ],
-                position: 'bottom-middle',
-                components: { preview: true, opacity: true, hue: true, interaction: { hex: true, rgba: true, input: true, save: true } }
-            });
-
-            let saveAction = () => {};
-            let initialColor = '#ffffff';
+            let targetType = 'gridBg';
+            let initialColor = document.body.style.background;
 
             if (isEditing && activeEditingElement) {
-                initialColor = window.getComputedStyle(activeEditingElement).color;
-                saveAction = (c) => { formatText('foreColor', c.toRGBA().toString()); recordState(); };
+                targetType = 'text';
+                initialColor = getComputedStyle(activeEditingElement).color;
             } else if (lastSelectedItem?.classList.contains('block')) {
-                initialColor = window.getComputedStyle(lastSelectedItem).backgroundColor;
-                saveAction = (c) => { selection.forEach(i => i.classList.contains('block') && (i.style.backgroundColor = c.toRGBA().toString())); recordState(); };
+                targetType = 'blockBg';
+                initialColor = getComputedStyle(lastSelectedItem).backgroundColor;
             } else if (lastSelectedItem?.classList.contains('arrow-group')) {
+                targetType = 'arrow';
                 initialColor = lastSelectedItem.querySelector('.arrow-line').getAttribute('stroke');
-                saveAction = (c) => { selection.forEach(i => { if (i.classList.contains('arrow-group')) { i.querySelector('.arrow-line').setAttribute('stroke', c.toRGBA().toString()); updateSingleArrow(i); } }); recordState(); };
-            } else {
-                initialColor = window.getComputedStyle(document.body).backgroundColor;
-                saveAction = (c) => { document.body.style.background = c.toRGBA().toString(); recordState(); };
             }
             
-            picker.setColor(initialColor);
-
-            const handleEnterKey = (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const saveBtn = picker.getRoot().interaction.save;
-                    saveBtn.click();
-                }
-            };
-            
-            picker.on('show', instance => {
-                if (currentlyVisiblePicker && currentlyVisiblePicker !== instance) {
-                    currentlyVisiblePicker.hide();
-                }
-                currentlyVisiblePicker = instance;
-                activePicker = instance;
-                const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
-                inputs.forEach(input => input.addEventListener('keydown', handleEnterKey));
-                setTimeout(() => {
-                    const pickerApp = instance.getRoot().app;
-                    const pickerRect = pickerApp.getBoundingClientRect();
-                    let newLeft = xPos;
-                    let newTop = yPos + 15;
-                    if (newLeft + pickerRect.width > window.innerWidth) newLeft = window.innerWidth - pickerRect.width - 5;
-                    if (newTop + pickerRect.height > window.innerHeight) newTop = yPos - pickerRect.height - 15;
-                    pickerApp.style.left = `${newLeft}px`;
-                    pickerApp.style.top = `${newTop}px`;
-                }, 0);
+            colorPicker.show(initialColor, (newColor) => {
+                handleColorConfirm(targetType, newColor);
             });
-
-            picker.on('save', (color, instance) => {
-                saveAction(color);
-                instance.hide();
-            }).on('hide', (instance) => {
-                if (currentlyVisiblePicker === instance) currentlyVisiblePicker = null;
-                if(activePicker === instance) activePicker = null;
-                const inputs = instance.getRoot().interaction.result.parentElement.querySelectorAll('input');
-                inputs.forEach(input => input.removeEventListener('keydown', handleEnterKey));
-                instance.destroyAndRemove();
-            });
-
-            picker.show();
+            colorPicker.setPosition(lastMouseX, lastMouseY);
         }
 
         function recordState() {
@@ -2343,15 +2378,6 @@
             return arrowGroup;
         }
 
-        function rgbToHex(rgb) {
-            if (!rgb || rgb === 'transparent') return '#ffffff';
-            if (rgb.startsWith('#')) return rgb;
-            const rgbArr = rgb.match(/\d+/g);
-            if (!rgbArr) return '#000000';
-            const hex = rgbArr.map(x => ('0' + parseInt(x).toString(16)).slice(-2)).join('');
-            return `#${hex}`;
-        }
-
         function getBlockCenter(block) {
             const x = parseInt(block.style.left);
             const y = parseInt(block.style.top);
@@ -2394,6 +2420,142 @@
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
+        }
+
+        // --- Custom Color Picker Logic ---
+        function createColorPicker() {
+            const picker = document.getElementById('custom-color-picker');
+            const header = picker.querySelector('.color-picker-header');
+            const spectrum = document.getElementById('color-spectrum');
+            const cursor = document.getElementById('spectrum-cursor');
+            const hueSlider = document.getElementById('hue-slider');
+            const opacitySlider = document.getElementById('opacity-slider');
+            const hexInput = document.getElementById('hex-input');
+            const rInput = document.getElementById('rgba-input-r');
+            const gInput = document.getElementById('rgba-input-g');
+            const bInput = document.getElementById('rgba-input-b');
+            const aInput = document.getElementById('rgba-input-a');
+            const confirmBtn = document.getElementById('color-picker-confirm');
+            const cancelBtn = document.getElementById('color-picker-cancel');
+
+            let state = { h: 0, s: 1, v: 1, a: 1 };
+            let onConfirmCallback = null;
+
+            function updateUI() {
+                const { r, g, b } = hsvToRgb(state.h, state.s, state.v);
+                const rgbaColor = `rgba(${r}, ${g}, ${b}, ${state.a})`;
+                
+                spectrum.style.background = `linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(${state.h}, 100%, 50%))`;
+                opacitySlider.style.background = `linear-gradient(to right, transparent, rgb(${r},${g},${b}))`;
+                
+                cursor.style.left = `${state.s * 100}%`;
+                cursor.style.top = `${(1 - state.v) * 100}%`;
+                cursor.style.borderColor = state.v > 0.5 ? 'black' : 'white';
+
+                hexInput.value = rgbToHex(r, g, b);
+                rInput.value = r;
+                gInput.value = g;
+                bInput.value = b;
+                aInput.value = state.a.toFixed(2);
+            }
+
+            function updateFromInputs() {
+                const r = parseInt(rInput.value);
+                const g = parseInt(gInput.value);
+                const b = parseInt(bInput.value);
+                const a = parseFloat(aInput.value);
+                const { h, s, v } = rgbToHsv(r, g, b);
+                state = { h, s, v, a };
+                hueSlider.value = h;
+                opacitySlider.value = a;
+                updateUI();
+            }
+
+            function handleSpectrumMove(e) {
+                const rect = spectrum.getBoundingClientRect();
+                state.s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                state.v = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+                updateUI();
+            }
+            
+            spectrum.addEventListener('mousedown', e => {
+                handleSpectrumMove(e);
+                const onMouseMove = (moveE) => handleSpectrumMove(moveE);
+                const onMouseUp = () => document.removeEventListener('mousemove', onMouseMove);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp, { once: true });
+            });
+
+            hueSlider.addEventListener('input', () => { state.h = parseInt(hueSlider.value); updateUI(); });
+            opacitySlider.addEventListener('input', () => { state.a = parseFloat(opacitySlider.value); updateUI(); });
+            
+            [rInput,gInput,bInput,aInput].forEach(input => input.addEventListener('change', updateFromInputs));
+            hexInput.addEventListener('change', () => {
+                const { r, g, b } = hexToRgb(hexInput.value);
+                const { h, s, v } = rgbToHsv(r, g, b);
+                state.h = h; state.s = s; state.v = v;
+                updateUI();
+            });
+
+            confirmBtn.addEventListener('click', () => {
+                const { r, g, b } = hsvToRgb(state.h, state.s, state.v);
+                if (onConfirmCallback) onConfirmCallback(`rgba(${r}, ${g}, ${b}, ${state.a})`);
+                picker.classList.add('hidden');
+            });
+            cancelBtn.addEventListener('click', () => picker.classList.add('hidden'));
+
+            header.addEventListener('mousedown', e => {
+                let offsetX = e.clientX - picker.offsetLeft;
+                let offsetY = e.clientY - picker.offsetTop;
+                const onMouseMove = (moveE) => {
+                    picker.style.left = `${moveE.clientX - offsetX}px`;
+                    picker.style.top = `${moveE.clientY - offsetY}px`;
+                };
+                const onMouseUp = () => document.removeEventListener('mousemove', onMouseMove);
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp, { once: true });
+            });
+
+            // --- Color Conversion Helpers ---
+            function hsvToRgb(h, s, v) {
+                let r, g, b, i, f, p, q, t;
+                i = Math.floor(h / 60); f = h / 60 - i; p = v * (1 - s); q = v * (1 - f * s); t = v * (1 - (1 - f) * s);
+                switch (i % 6) { case 0: r = v; g = t; b = p; break; case 1: r = q; g = v; b = p; break; case 2: r = p; g = v; b = t; break; case 3: r = p; g = q; b = v; break; case 4: r = t; g = p; b = v; break; case 5: r = v; g = p; b = q; break; }
+                return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+            }
+            function rgbToHsv(r, g, b) {
+                r /= 255; g /= 255; b /= 255; let max = Math.max(r, g, b), min = Math.min(r, g, b), h, s, v = max, d = max - min; s = max === 0 ? 0 : d / max;
+                if (max === min) h = 0; else { switch (max) { case r: h = (g - b) / d + (g < b ? 6 : 0); break; case g: h = (b - r) / d + 2; break; case b: h = (r - g) / d + 4; break; } h /= 6; }
+                return { h: h * 360, s: s, v: v };
+            }
+            function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
+            function hexToRgb(hex) {
+                let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r:0,g:0,b:0};
+            }
+            function parseRgba(rgba) {
+                const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+                return match ? {r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]), a: match[4] !== undefined ? parseFloat(match[4]) : 1} : {r:255, g:255, b:255, a:1};
+            }
+
+            return {
+                show(initialColor, onConfirm) {
+                    onConfirmCallback = onConfirm;
+                    const {r, g, b, a} = parseRgba(initialColor);
+                    const {h, s, v} = rgbToHsv(r, g, b);
+                    state = {h, s, v, a};
+                    hueSlider.value = h;
+                    opacitySlider.value = a;
+                    updateUI();
+                    picker.classList.remove('hidden');
+                },
+                hide() { picker.classList.add('hidden'); },
+                isHidden() { return picker.classList.contains('hidden'); },
+                setPosition(x, y) {
+                    picker.style.left = `${Math.max(0, Math.min(x, window.innerWidth - picker.offsetWidth))}px`;
+                    picker.style.top = `${Math.max(0, Math.min(y, window.innerHeight - picker.offsetHeight))}px`;
+                }
+            };
         }
 
         initialize();
