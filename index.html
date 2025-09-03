@@ -114,6 +114,7 @@
             width: 100%;
             min-height: 30px;
             overflow-wrap: break-word;
+            white-space: pre-wrap;
             transition: color 0.3s, font-size 0.3s;
             flex-grow: 1;
             user-select: none;
@@ -387,7 +388,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
         .color-picker-wrapper {
             width: 24px;
@@ -401,7 +402,11 @@
             background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;
         }
         .control-group input[type="checkbox"] { width: auto; }
-        .text-format-buttons { display: flex; gap: 10px; }
+        .text-format-buttons { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 12px;
+        }
         .format-btn {
             flex: 1; background: #555; border: 1px solid #666;
             color: white; padding: 5px; border-radius: 4px; cursor: pointer;
@@ -2099,7 +2104,12 @@
         function applyPageState(state) {
             document.querySelectorAll('.block').forEach(b => b.remove());
             svgCanvas.querySelectorAll('.arrow-group').forEach(ag => ag.remove());
+            
+            // Clear defs but keep the selection glow filter
+            const glowFilter = svgDefs.querySelector('#selection-glow');
             svgDefs.innerHTML = '';
+            if (glowFilter) svgDefs.appendChild(glowFilter);
+
             deselectAll();
             
             gridX = state.viewport?.gridX || 0;
@@ -2575,8 +2585,8 @@
                     return;
                 }
                 const spanEl = document.createElement('span');
-                // Use textContent to prevent XSS
-                spanEl.textContent = span.text.replace(/\s/g, '\u00A0'); // Replace spaces with non-breaking spaces
+                // Use textContent to prevent XSS. No longer replacing spaces.
+                spanEl.textContent = span.text;
                 
                 Object.entries(span.style).forEach(([key, value]) => {
                     // Convert camelCase to kebab-case for CSS properties
