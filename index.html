@@ -1097,6 +1097,8 @@
             }
             if (isEditing && activeEditingElement) {
                 const currentBlockEl = activeEditingElement.closest('.block');
+                // This logic ensures the editor only closes if you click outside of the
+                // block being edited, the sidebar, or the color picker.
                 if (!currentBlockEl.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('#custom-color-picker')) {
                     finishEditing();
                     e.stopPropagation();
@@ -1404,6 +1406,20 @@
             }
         }
         
+        /**
+         * NEW: Saves text dynamically as the user types.
+         */
+        function handleDynamicTextUpdate() {
+            if (!isEditing || !activeEditingElement) return;
+            const block = activeEditingElement.closest('.block');
+            
+            // Update the block's main data model from the live DOM
+            block.contentModel = parseContent(activeEditingElement);
+            
+            // Also update the temporary working copy of the model used by styling functions
+            activeContentModel = JSON.parse(JSON.stringify(block.contentModel));
+        }
+
         function startEditing(block) {
             const contentEl = block.querySelector('.block-content');
             if (contentEl.querySelector('iframe, video, img')) return;
@@ -1414,6 +1430,7 @@
             activeContentModel = JSON.parse(JSON.stringify(block.contentModel)); // Work on a copy
 
             contentEl.contentEditable = true;
+            contentEl.addEventListener('input', handleDynamicTextUpdate); // Add listener for dynamic saving
             contentEl.focus();
             updateCustomizePanel();
         }
@@ -1422,7 +1439,9 @@
             if (!isEditing || !activeEditingElement) return;
             const block = activeEditingElement.closest('.block');
             
-            // Parse the final HTML back to the data model
+            activeEditingElement.removeEventListener('input', handleDynamicTextUpdate); // Clean up listener
+            
+            // Parse the final HTML back to the data model to ensure it's current
             block.contentModel = parseContent(activeEditingElement);
 
             isEditing = false;
@@ -2642,7 +2661,7 @@
             }
         }
 
-        function applyStyleToSelection(styleToApply) {
+    function applyStyleToSelection(styleToApply) {
             if (!isEditing) return;
 
             const selectionIndices = getSelectionIndices(activeEditingElement);
@@ -2695,7 +2714,7 @@
             activeContentModel = mergeModel(newModel);
             renderContent(activeContentModel, activeEditingElement);
             restoreSelection(selectionIndices);
-            recordState(); // Record state after model modification
+            // recordState(); // <-- THIS LINE WAS THE PROBLEM AND HAS BEEN REMOVED.
         }
         
         function mergeModel(model) {
