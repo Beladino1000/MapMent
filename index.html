@@ -74,9 +74,8 @@
             stroke-width: 15;
         }
 
-        #arrow-svg .arrow-group.selected .arrow-line {
-            stroke: #e74c3c !important;
-            stroke-width: 5px;
+        #arrow-svg .arrow-group.selected {
+            filter: url(#selection-glow);
         }
 
         .block {
@@ -559,7 +558,17 @@
     <div class="container" id="container">
         <div class="grid" id="grid">
             <svg id="arrow-svg">
-                <defs></defs>
+                <defs>
+                    <filter id="selection-glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"></feGaussianBlur>
+                        <feFlood flood-color="#3498db" result="color"></feFlood>
+                        <feComposite in="color" in2="blur" operator="in" result="glow"></feComposite>
+                        <feMerge>
+                            <feMergeNode in="glow"></feMergeNode>
+                            <feMergeNode in="SourceGraphic"></feMergeNode>
+                        </feMerge>
+                    </filter>
+                </defs>
             </svg>
         </div>
     </div>
@@ -628,7 +637,8 @@
                 </div>
                 <div id="arrow-controls" class="control-group hidden">
                     <h5>Arrow</h5>
-                    <label><span>Color</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label><label><span>Width (px)</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label><label><span>Head Size</span><input type="range" id="arrow-head-size" min="5" max="25" step="1" value="10"></label>
+                    <label><span>Color</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label>
+                    <label><span>Size</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
                 </div>
                 <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
             </div>
@@ -1407,7 +1417,7 @@
         }
         
         /**
-         * NEW: Saves text dynamically as the user types.
+         * Saves text dynamically as the user types.
          */
         function handleDynamicTextUpdate() {
             if (!isEditing || !activeEditingElement) return;
@@ -1599,7 +1609,8 @@
             if (reverseArrow) {
                 const reverseLine = reverseArrow.querySelector('.arrow-line');
                 const color = reverseLine.getAttribute('stroke');
-                const headSize = parseFloat(reverseArrow.dataset.headSize) || 10;
+                const strokeWidth = parseFloat(reverseLine.getAttribute('stroke-width')) || 3;
+                const headSize = strokeWidth * 3 + 5;
                 
                 const startMarkerId = `arrowhead-start-${endBlock.id}-${arrowStartBlock.id}`;
                 const marker = createOrUpdateMarker(startMarkerId, color, headSize);
@@ -1618,7 +1629,8 @@
                 } else {
                     const arrowLine = tempArrow;
                     const color = arrowLine.getAttribute('stroke');
-                    const headSize = 10;
+                    const strokeWidth = parseFloat(arrowLine.getAttribute('stroke-width')) || 3;
+                    const headSize = strokeWidth * 3 + 5;
                     
                     const markerId = `arrowhead-end-${arrowStartBlock.id}-${endBlock.id}`;
                     const marker = createOrUpdateMarker(markerId, color, headSize);
@@ -1628,7 +1640,6 @@
                     tempGroup.classList.add('arrow-group');
                     tempGroup.dataset.startBlock = arrowStartBlock.id;
                     tempGroup.dataset.endBlock = endBlock.id;
-                    tempGroup.dataset.headSize = headSize;
                     
                     arrowLine.classList.add('arrow-line');
                     const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1727,7 +1738,8 @@
             });
             
             const color = arrowLine.getAttribute('stroke') || '#3498db';
-            const headSize = arrowGroup.dataset.headSize || 10;
+            const strokeWidth = parseFloat(arrowLine.getAttribute('stroke-width')) || 3;
+            const headSize = strokeWidth * 3 + 5; // Proportional head size logic
             
             const endMarkerUrl = arrowLine.getAttribute('marker-end');
             if (endMarkerUrl) {
@@ -1816,7 +1828,6 @@
             textFont: document.getElementById('text-font'),
             linkSrc: document.getElementById('link-src'),
             arrowWidth: document.getElementById('arrow-width'),
-            arrowHeadSize: document.getElementById('arrow-head-size'),
             boldBtn: document.getElementById('bold-btn'),
             italicBtn: document.getElementById('italic-btn'),
             underlineBtn: document.getElementById('underline-btn'),
@@ -1869,7 +1880,6 @@
                     const color = arrowLine.getAttribute('stroke') || '#000000';
                     document.querySelector('[data-color-target="arrow"]').style.background = color;
                     nonColorInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
-                    nonColorInputs.arrowHeadSize.value = arrowToSample.dataset.headSize || 10;
                 }
             }
 
@@ -1892,24 +1902,18 @@
         
         nonColorInputs.linkSrc.addEventListener('change', recordState);
 
-        const updateSelectedArrows = (property, value) => {
+        const updateSelectedArrows = (widthValue) => {
             selection.forEach(item => {
                 if (item.classList.contains('arrow-group')) {
                     const arrowLine = item.querySelector('.arrow-line');
-                    if (property === 'width') {
-                        arrowLine.setAttribute('stroke-width', value);
-                    } else if (property === 'headSize') {
-                        item.dataset.headSize = value;
-                    }
+                    arrowLine.setAttribute('stroke-width', widthValue);
                     updateSingleArrow(item);
                 }
             });
         };
 
-        nonColorInputs.arrowWidth.addEventListener('input', e => updateSelectedArrows('width', e.target.value));
-        nonColorInputs.arrowHeadSize.addEventListener('input', e => updateSelectedArrows('headSize', e.target.value));
+        nonColorInputs.arrowWidth.addEventListener('input', e => updateSelectedArrows(e.target.value));
         nonColorInputs.arrowWidth.addEventListener('change', recordState);
-        nonColorInputs.arrowHeadSize.addEventListener('change', recordState);
 
 
         function updateTextControlsOnSelectionChange() {
@@ -2069,7 +2073,6 @@
                         endBlock: arrowGroup.dataset.endBlock,
                         color: arrowLine.getAttribute('stroke'),
                         width: arrowLine.getAttribute('stroke-width'),
-                        headSize: arrowGroup.dataset.headSize,
                         bidirectional: arrowGroup.dataset.bidirectional === 'true',
                     };
                 }),
@@ -2186,14 +2189,25 @@
             if (currentPageIndex > 0) loadPage(currentPageIndex - 1);
         }
 
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
         async function importPdf(file) {
-            showToast(`Importing ${file.name}...`, 10000);
+            showToast(`Importing ${file.name}... This may take a moment.`, 10000);
             const fileReader = new FileReader();
 
             fileReader.onload = async function() {
                 try {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const pdfData = this.result;
+                    const pdfDataUrl = `data:application/pdf;base64,${arrayBufferToBase64(pdfData)}`;
+                    
+                    const pdf = await pdfjsLib.getDocument({data: pdfData}).promise;
 
                     const wasEmpty = pages.length === 1 && pages[0].blocks.length === 0;
                     if (wasEmpty) {
@@ -2206,35 +2220,27 @@
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 1.0 }); // Use native scale
                         
-                        const availableWidth = container.clientWidth * 0.85;
-                        const availableHeight = container.clientHeight * 0.85;
-                        const unscaledViewport = page.getViewport({ scale: 1.0 });
-                        const scaleX = availableWidth / unscaledViewport.width;
-                        const scaleY = availableHeight / unscaledViewport.height;
-                        const optimalScale = Math.min(scaleX, scaleY);
-                        const viewport = page.getViewport({ scale: optimalScale });
+                        // Set a standard width and calculate height based on aspect ratio
+                        const maxWidth = 1000;
+                        const blockWidth = viewport.width > maxWidth ? maxWidth : viewport.width;
+                        const blockHeight = blockWidth * (viewport.height / viewport.width);
 
                         const gridCenter = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
-                        const blockX = Math.max(0, gridCenter.x - viewport.width / 2);
-                        const blockY = Math.max(0, gridCenter.y - viewport.height / 2);
+                        const blockX = Math.max(0, gridCenter.x - blockWidth / 2);
+                        const blockY = Math.max(0, gridCenter.y - blockHeight / 2);
                         
-                        const canvas = document.createElement('canvas');
-                        const context = canvas.getContext('2d');
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-
-                        await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-                        const imageDataUrl = canvas.toDataURL();
+                        const iframeSrc = `${pdfDataUrl}#page=${i}&view=FitH`;
+                        const iframeHtml = `<iframe src="${iframeSrc}" style="width:100%; height:100%; border:none;"></iframe>`;
                         
                         const newPage = {
                             blocks: [{
                                 x: blockX,
                                 y: blockY,
-                                width: `${viewport.width}px`,
-                                height: `${viewport.height}px`,
-                                contentModel: [{ text: `<img src="${imageDataUrl}" style="width: 100%; height: auto; display: block;">`, style: {}, isHTML: true }],
+                                width: `${blockWidth}px`,
+                                height: `${blockHeight}px`,
+                                contentModel: [{ text: iframeHtml, style: {}, isHTML: true }],
                                 id: `block-slide-${importStartIndex + i - 1}-${blockCounter++}`
                             }],
                             arrows: [],
@@ -2326,7 +2332,6 @@
                         endBlock: idMap.get(endId),
                         color: arrowLine.getAttribute('stroke'),
                         width: arrowLine.getAttribute('stroke-width'),
-                        headSize: arrow.dataset.headSize,
                         bidirectional: arrow.dataset.bidirectional === 'true',
                     };
                     const newArrowGroup = createArrow(newArrowData);
@@ -2344,13 +2349,14 @@
             arrowGroup.classList.add('arrow-group');
             arrowGroup.dataset.startBlock = arrowData.startBlock;
             arrowGroup.dataset.endBlock = arrowData.endBlock;
-            const headSize = arrowData.headSize || 10;
-            arrowGroup.dataset.headSize = headSize;
             
             const arrowLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             arrowLine.classList.add('arrow-line');
             arrowLine.setAttribute('stroke', arrowData.color);
             arrowLine.setAttribute('stroke-width', arrowData.width);
+
+            const strokeWidth = parseFloat(arrowData.width) || 3;
+            const headSize = strokeWidth * 3 + 5;
 
             const endMarkerId = `arrowhead-end-${arrowData.startBlock}-${arrowData.endBlock}`;
             let marker = createOrUpdateMarker(endMarkerId, arrowData.color, headSize);
@@ -2632,6 +2638,7 @@
             let endNode = null, endOffset = 0;
             
             function findNodeAndOffset(targetIndex) {
+                if (!activeEditingElement) return { node: null, offset: 0 };
                 for (const node of activeEditingElement.childNodes) {
                     const nodeLength = node.textContent.length;
                     if (charIndex + nodeLength >= targetIndex) {
@@ -2640,6 +2647,7 @@
                     charIndex += nodeLength;
                 }
                 const lastChild = activeEditingElement.lastChild;
+                if (!lastChild) return { node: activeEditingElement, offset: 0 };
                 return { node: lastChild.firstChild || lastChild, offset: lastChild.textContent.length };
             }
             
@@ -2653,15 +2661,17 @@
             endOffset = end.offset;
             
             try {
-                range.setStart(startNode, startOffset);
-                range.setEnd(endNode, endOffset);
-                selection.addRange(range);
+                if (startNode && endNode) {
+                    range.setStart(startNode, startOffset);
+                    range.setEnd(endNode, endOffset);
+                    selection.addRange(range);
+                }
             } catch (e) {
                 console.error("Failed to restore selection.", e);
             }
         }
 
-    function applyStyleToSelection(styleToApply) {
+        function applyStyleToSelection(styleToApply) {
             if (!isEditing) return;
 
             const selectionIndices = getSelectionIndices(activeEditingElement);
@@ -2714,7 +2724,6 @@
             activeContentModel = mergeModel(newModel);
             renderContent(activeContentModel, activeEditingElement);
             restoreSelection(selectionIndices);
-            // recordState(); // <-- THIS LINE WAS THE PROBLEM AND HAS BEEN REMOVED.
         }
         
         function mergeModel(model) {
