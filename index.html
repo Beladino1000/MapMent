@@ -269,7 +269,7 @@
         }
         .toast-notification.show { opacity: 1; bottom: 100px; }
 
-        input, textarea, select {
+        input, textarea {
             user-select: auto;
             -webkit-user-select: auto;
             -moz-user-select: auto;
@@ -397,7 +397,7 @@
             border: 1px solid #777;
             cursor: pointer;
         }
-        .control-group input[type="range"], .control-group input[type="number"], .control-group select, .control-group input[type="text"], .control-group input[type="checkbox"] {
+        .control-group input[type="range"], .control-group input[type="number"], .control-group input[type="text"], .control-group input[type="checkbox"] {
             width: 120px;
             background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;
         }
@@ -412,6 +412,43 @@
         .format-btn.active { background-color: #3498db; }
         .hidden { display: none !important; }
 
+        /* Custom Dropdown Styles */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: #444;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 4px 8px;
+            padding-right: 25px; /* space for arrow */
+            width: 120px;
+            cursor: pointer;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 8px top 50%;
+            background-size: .65em auto;
+        }
+
+        /* Custom Scrollbar Styles */
+        .sidebar::-webkit-scrollbar {
+            width: 10px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #3498db;
+        }
+        
         /* Custom Color Picker Styles */
         #custom-color-picker {
             position: fixed;
@@ -495,6 +532,14 @@
             border-radius: 4px;
             padding: 4px;
             text-align: center;
+        }
+        .color-inputs input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .color-inputs input[type="number"]::-webkit-inner-spin-button,
+        .color-inputs input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
         .color-picker-footer {
             margin-top: 10px;
@@ -672,10 +717,12 @@
         let scale = 1;
         let tempArrow = null;
         let ctrlPressed = false;
-        let lastBlockCreationAction = () => addNewBlock('html', 'New block.');
-        let savedSelectionRange = null; 
+        let lastBlockCreationAction = () => addNewBlock('New block.');
         let activeEditingElement = null; 
         let marqueeBox = null, marqueeStartX = 0, marqueeStartY = 0;
+        
+        // Data model for the active block's content
+        let activeContentModel = [];
         
         let pages = [];
         let currentPageIndex = 0;
@@ -693,8 +740,8 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    { x: 540, y: 300, htmlContent: "MentMap: Faça seus materiais para apresentação e mapas mentais.", id: 'block-0' },
-                    { x: 1140, y: 300, htmlContent: "É extremamente fácil fazê-los", id: 'block-1' }
+                    { x: 540, y: 300, contentModel: [{ text: "MentMap: Faça seus materiais para apresentação e mapas mentais.", style: {} }], id: 'block-0' },
+                    { x: 1140, y: 300, contentModel: [{ text: "É extremamente fácil fazê-los", style: {} }], id: 'block-1' }
                 ],
                 arrows: [],
                 viewport: { gridX: 0, gridY: 0, scale: 1 },
@@ -762,15 +809,8 @@
 
 
         document.addEventListener('selectionchange', () => {
-            if (isEditing && activeEditingElement) {
-                const selection = window.getSelection();
-                if (selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    if (activeEditingElement.contains(range.commonAncestorContainer)) {
-                        savedSelectionRange = range.cloneRange();
-                        updateTextControlsOnSelectionChange();
-                    }
-                }
+            if (isEditing) {
+                updateTextControlsOnSelectionChange();
             }
         });
         
@@ -859,11 +899,20 @@
 
             if (config.handleColor) block.style.setProperty('--handle-color', config.handleColor);
             if (config.handleDisplay) block.style.setProperty('--handle-display', config.handleDisplay);
+            
+            // Store data model on the element
+            block.contentModel = config.contentModel || [];
 
             const contentEl = document.createElement('div');
             contentEl.className = 'block-content';
-            contentEl.innerHTML = config.htmlContent || config.content || '';
             block.appendChild(contentEl);
+
+            if (config.htmlContent) { // For backwards compatibility with old format
+                block.contentModel = parseContent(contentEl, config.htmlContent);
+            }
+            
+            renderContent(block.contentModel, contentEl);
+
 
             const handles = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
             handles.forEach(handle => {
@@ -878,35 +927,35 @@
             block.addEventListener('dblclick', (e) => handleBlockDblClick(e, block));
             
             contentEl.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (isEditing && (e.key === 'Enter' && !e.shiftKey)) {
                     e.preventDefault();
-                    finishEditing(block);
+                    finishEditing();
                 }
             });
-
-            contentEl.addEventListener('keyup', updateTextControlsOnSelectionChange);
-            contentEl.addEventListener('mouseup', updateTextControlsOnSelectionChange);
             
             new ResizeObserver(() => updateArrowsForBlock(block)).observe(block);
             return block;
         }
 
-        function addNewBlock(contentType = 'html', contentData = 'New block.', options = {}) {
+        function addNewBlock(text, options = {}) {
             let coords;
             if(contextMenuX && contextMenuY) {
                 coords = screenToGridCoords(contextMenuX, contextMenuY);
             } else {
                 coords = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
             }
+            
+            const contentModel = text.includes('<iframe') || text.includes('<video') || text.includes('<img')
+                ? [{ text: text, style: {}, isHTML: true }]
+                : [{ text: text, style: {} }];
 
-            let config = { x: coords.x, y: coords.y, htmlContent: contentData };
+            let config = { x: coords.x, y: coords.y, contentModel: contentModel };
             Object.assign(config, options);
 
             const newBlock = createBlock(config);
             updateSelection(newBlock, false);
             
-            const isEmbed = contentData.includes('<iframe') || contentData.includes('<video') || contentData.includes('<img');
-            if (contentType === 'html' && !isEmbed) {
+            if (!contentModel[0].isHTML) {
                 startEditing(newBlock);
                 const contentEl = newBlock.querySelector('.block-content');
                 const range = document.createRange();
@@ -922,7 +971,7 @@
             if (e.target.closest('a, button, input, iframe, video')) {
                 return;
             }
-            startEditing(block, e);
+            startEditing(block);
         }
 
         function handleBlockMouseDown(e, block) {
@@ -1047,9 +1096,9 @@
                 }
             }
             if (isEditing && activeEditingElement) {
-                const currentBlock = activeEditingElement.closest('.block');
-                if (!currentBlock.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('#custom-color-picker')) {
-                    finishEditing(currentBlock);
+                const currentBlockEl = activeEditingElement.closest('.block');
+                if (!currentBlockEl.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('#custom-color-picker')) {
+                    finishEditing();
                     e.stopPropagation();
                     e.preventDefault();
                 }
@@ -1092,7 +1141,7 @@
             
             const actionMap = {
                 'add-text': () => { 
-                    lastBlockCreationAction = () => addNewBlock('html', 'New text block.');
+                    lastBlockCreationAction = () => addNewBlock('New text block.');
                     lastBlockCreationAction();
                 },
                 'add-image': () => {
@@ -1114,7 +1163,7 @@
                                         const newWidth = Math.min(img.width, maxWidth);
                                         const newHeight = newWidth * aspectRatio;
                                         const html = `<img src="${dataUrl}" alt="User content">`;
-                                        addNewBlock('html', html, { width: `${newWidth}px`, height: `${newHeight}px` });
+                                        addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
                                     };
                                     img.src = dataUrl;
                                 } else if (file.type.startsWith('video/')) {
@@ -1125,7 +1174,7 @@
                                         const newWidth = Math.min(video.videoWidth, maxWidth);
                                         const newHeight = newWidth * aspectRatio;
                                         const html = `<video src="${dataUrl}" controls></video>`;
-                                        addNewBlock('html', html, { width: `${newWidth}px`, height: `${newHeight}px` });
+                                        addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
                                     };
                                     video.src = dataUrl;
                                 }
@@ -1147,7 +1196,7 @@
                                 const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
                                 if (match && match[1]) embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
                             }
-                            if (embedUrl) addNewBlock('html', `<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`, { width: '560px', height: '315px' });
+                            if (embedUrl) addNewBlock(`<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`, { width: '560px', height: '315px' });
                             else showToast('Invalid or unsupported video URL.');
                         }
                     };
@@ -1157,7 +1206,7 @@
                 'add-desmos': () => {
                     const createDesmosBlock = () => {
                         const desmosUrl = prompt('Enter the Desmos graph URL:');
-                        if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) addNewBlock('html', `<iframe src="${desmosUrl}"></iframe>`, { width: '600px', height: '400px' });
+                        if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) addNewBlock(`<iframe src="${desmosUrl}"></iframe>`, { width: '600px', height: '400px' });
                         else if (desmosUrl) showToast('Invalid Desmos URL.');
                     };
                     lastBlockCreationAction = createDesmosBlock;
@@ -1176,7 +1225,7 @@
                                 mammoth.convertToHtml({ arrayBuffer: res.target.result })
                                     .then(result => {
                                         const docHtml = `<div style="padding: 20px; font-family: serif; line-height: 1.6; background: white; height: 100%; overflow-y: auto;">${result.value}</div>`;
-                                        addNewBlock('html', docHtml, { width: '800px', height: '600px' });
+                                        addNewBlock(docHtml, { width: '800px', height: '600px' });
                                     })
                                     .catch(err => {
                                         console.error("Error converting docx:", err);
@@ -1202,7 +1251,7 @@
 
                             if (embedUrl) {
                                 const iframeHtml = `<iframe src="${embedUrl}" style="width:100%; height:100%; border:none;"></iframe>`;
-                                addNewBlock('html', iframeHtml, { width: '800px', height: '600px' });
+                                addNewBlock(iframeHtml, { width: '800px', height: '600px' });
                             } else {
                                 showToast('Invalid Google Doc or PDF URL.');
                             }
@@ -1253,9 +1302,6 @@
                 return;
             }
 
-            if (isEditing && e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
-                return; 
-            }
             if (isEditing) return;
             
             if (e.ctrlKey && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
@@ -1357,58 +1403,35 @@
                 }
             }
         }
-
-        function handleEditorBlur() {
-            const selection = window.getSelection();
-            if (isEditing && selection.rangeCount > 0 && activeEditingElement.contains(selection.getRangeAt(0).commonAncestorContainer)) {
-                savedSelectionRange = selection.getRangeAt(0).cloneRange();
-            }
-        }
         
-        function restoreEditorSelection() {
-            if (!isEditing || !savedSelectionRange) return;
-            activeEditingElement.focus();
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(savedSelectionRange);
-        }
-        
-        function saveEditorSelection() {
-            if (!isEditing) return;
-            const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-                 savedSelectionRange = selection.getRangeAt(0).cloneRange();
-            }
+        function startEditing(block) {
+            const contentEl = block.querySelector('.block-content');
+            if (contentEl.querySelector('iframe, video, img')) return;
+
+            sidebar.classList.remove('hidden');
+            isEditing = true;
+            activeEditingElement = contentEl;
+            activeContentModel = JSON.parse(JSON.stringify(block.contentModel)); // Work on a copy
+
+            contentEl.contentEditable = true;
+            contentEl.focus();
+            updateCustomizePanel();
         }
 
-        function startEditing(block, e) {
-            if (e && e.target.closest('a, button, input')) return;
-            const contentEl = block.querySelector('.block-content');
-            if (contentEl && !contentEl.querySelector('iframe')) {
-                sidebar.classList.remove('hidden');
-                isEditing = true;
-                block.classList.add('is-editing');
-                activeEditingElement = contentEl;
-                contentEl.contentEditable = true;
-                contentEl.focus();
-                contentEl.addEventListener('blur', handleEditorBlur);
-                updateCustomizePanel();
-                updateTextControlsOnSelectionChange();
-            }
-        }
+        function finishEditing() {
+            if (!isEditing || !activeEditingElement) return;
+            const block = activeEditingElement.closest('.block');
+            
+            // Parse the final HTML back to the data model
+            block.contentModel = parseContent(activeEditingElement);
 
-        function finishEditing(block) {
-            const contentEl = block.querySelector('.block-content');
-            if (contentEl && contentEl.isContentEditable) {
-                isEditing = false;
-                block.classList.remove('is-editing');
-                contentEl.removeEventListener('blur', handleEditorBlur);
-                activeEditingElement = null;
-                savedSelectionRange = null;
-                contentEl.contentEditable = false;
-                updateArrowsForBlock(block);
-                recordState();
-            }
+            isEditing = false;
+            activeEditingElement.contentEditable = false;
+            activeEditingElement = null;
+            activeContentModel = [];
+
+            updateArrowsForBlock(block);
+            recordState();
         }
         
         function resizeBlock(e) {
@@ -1813,9 +1836,11 @@
                 if (hasIframe) {
                     nonColorInputs.linkSrc.value = hasIframe.src;
                 } else {
-                    const contentStyle = getComputedStyle(lastSelectedBlock.querySelector('.block-content'));
-                    document.querySelector('[data-color-target="text"]').style.background = contentStyle.color;
                     if (isEditing) updateTextControlsOnSelectionChange();
+                    else { // Update from model if not editing
+                        const styles = getStyleOfFirstCharacter(lastSelectedBlock.contentModel);
+                        document.querySelector('[data-color-target="text"]').style.background = styles.color || '#333';
+                    }
                 }
             }
             if (hasArrow) {
@@ -1830,66 +1855,16 @@
             }
 
             document.querySelector('[data-color-target="gridBg"]').style.background = document.body.style.background;
-            // This is a simplification for grid line color swatch
             document.querySelector('[data-color-target="gridLines"]').style.background = 'rgba(255,255,255,0.2)';
 
         }
-        
-        function formatText(command, value = null) {
-            if (!isEditing) return;
-            restoreEditorSelection();
-            document.execCommand("styleWithCSS", false, true);
-            document.execCommand(command, false, value);
-            activeEditingElement.focus();
-            saveEditorSelection();
-            updateTextControlsOnSelectionChange();
-        };
 
-        function addFormattingButtonListener(element, command) {
-            element.addEventListener('mousedown', (e) => {
-                e.preventDefault(); 
-                formatText(command);
-                recordState();
-            });
-        };
-
-        addFormattingButtonListener(nonColorInputs.boldBtn, 'bold');
-        addFormattingButtonListener(nonColorInputs.italicBtn, 'italic');
-        addFormattingButtonListener(nonColorInputs.underlineBtn, 'underline');
+        nonColorInputs.boldBtn.addEventListener('mousedown', e => { e.preventDefault(); applyStyleToSelection({ fontWeight: 'bold' }); });
+        nonColorInputs.italicBtn.addEventListener('mousedown', e => { e.preventDefault(); applyStyleToSelection({ fontStyle: 'italic' }); });
+        nonColorInputs.underlineBtn.addEventListener('mousedown', e => { e.preventDefault(); applyStyleToSelection({ textDecoration: 'underline' }); });
+        nonColorInputs.textSize.addEventListener('change', e => applyStyleToSelection({ fontSize: `${e.target.value}px` }));
+        nonColorInputs.textFont.addEventListener('change', e => applyStyleToSelection({ fontFamily: e.target.value }));
         
-        nonColorInputs.textSize.addEventListener('change', e => {
-            if (!isEditing) return;
-            restoreEditorSelection();
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                if (!range.collapsed) {
-                    const contents = range.extractContents();
-                    const elements = contents.querySelectorAll('span[style*="font-size"]');
-                    elements.forEach(el => {
-                        el.style.fontSize = '';
-                        if (!el.style.length) el.removeAttribute('style');
-                    });
-                    contents.querySelectorAll('font[size]').forEach(el => el.replaceWith(...el.childNodes));
-                    const span = document.createElement('span');
-                    span.style.fontSize = e.target.value + 'px';
-                    span.appendChild(contents);
-                    range.insertNode(span);
-                    selection.removeAllRanges();
-                    range.selectNodeContents(span);
-                    selection.addRange(range);
-                }
-            }
-            saveEditorSelection();
-            updateTextControlsOnSelectionChange();
-            recordState();
-        });
-        
-        nonColorInputs.textFont.addEventListener('change', e => {
-            formatText('fontName', e.target.value);
-            recordState();
-        });
-
         nonColorInputs.handleVisible.addEventListener('change', e => {
             const value = e.target.checked ? 'block' : 'none';
             selection.forEach(i => i.classList.contains('block') && i.style.setProperty('--handle-display', value));
@@ -1922,31 +1897,38 @@
             if (!isEditing || !activeEditingElement) return;
 
             const selection = window.getSelection();
-            if (selection.rangeCount === 0) return;
+            if (selection.rangeCount === 0 || selection.isCollapsed) {
+                // For a collapsed cursor, get style from character before it
+                const range = selection.getRangeAt(0);
+                const { index } = getSelectionIndices(activeEditingElement);
+                const styles = getStyleAtCharacterIndex(index > 0 ? index - 1 : 0);
+                updateToolbarUI(styles);
+                return;
+            };
 
-            let parentEl = selection.getRangeAt(0).commonAncestorContainer;
-            if (parentEl.nodeType !== 1) {
-                parentEl = parentEl.parentNode;
-            }
-            
-            const styles = window.getComputedStyle(parentEl);
-            nonColorInputs.boldBtn.classList.toggle('active', styles.fontWeight === '700' || styles.fontWeight === 'bold');
+            const styles = getCommonStyleInSelection();
+            updateToolbarUI(styles);
+        }
+
+        function updateToolbarUI(styles) {
+            if (!styles) return;
+            nonColorInputs.boldBtn.classList.toggle('active', styles.fontWeight === 'bold');
             nonColorInputs.italicBtn.classList.toggle('active', styles.fontStyle === 'italic');
-            nonColorInputs.underlineBtn.classList.toggle('active', styles.textDecorationLine.includes('underline'));
-            
-            const currentSize = Math.round(parseFloat(styles.fontSize));
+            nonColorInputs.underlineBtn.classList.toggle('active', styles.textDecoration === 'underline');
+
+            const currentSize = Math.round(parseFloat(styles.fontSize)) || 16;
             let closestOption = nonColorInputs.textSize.options[0];
-             for(const option of nonColorInputs.textSize.options) {
+            for (const option of nonColorInputs.textSize.options) {
                 if (Math.abs(option.value - currentSize) <= Math.abs(closestOption.value - currentSize)) {
                     closestOption = option;
                 }
             }
             nonColorInputs.textSize.value = closestOption.value;
-            
-            const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => styles.fontFamily.includes(opt.value));
+
+            const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => (styles.fontFamily || "").includes(opt.value));
             nonColorInputs.textFont.value = fontOption ? fontOption.value : nonColorInputs.textFont.options[0].value;
             
-            document.querySelector('[data-color-target="text"]').style.background = styles.color;
+            document.querySelector('[data-color-target="text"]').style.background = styles.color || '#333333';
         }
 
         let colorPicker = null;
@@ -1958,11 +1940,7 @@
                     e.stopPropagation();
                     
                     const targetType = wrapper.dataset.colorTarget;
-                    let initialColor = 'rgba(255, 255, 255, 1)';
-                    // Logic to get initial color based on selection
-                    try {
-                        initialColor = wrapper.style.backgroundColor || 'rgba(255,255,255,1)';
-                    } catch(e) {}
+                    let initialColor = wrapper.style.backgroundColor || 'rgba(255, 255, 255, 1)';
 
                     colorPicker.show(initialColor, (newColor) => {
                         handleColorConfirm(targetType, newColor);
@@ -1979,7 +1957,7 @@
                 'blockBg': () => selection.forEach(item => item.classList.contains('block') && (item.style.backgroundColor = color)),
                 'blockBorder': () => selection.forEach(item => item.classList.contains('block') && (item.style.borderColor = color)),
                 'handle': () => selection.forEach(item => item.classList.contains('block') && item.style.setProperty('--handle-color', color)),
-                'text': () => formatText('foreColor', color),
+                'text': () => applyStyleToSelection({ color: color }),
                 'arrow': () => selection.forEach(item => { if (item.classList.contains('arrow-group')) { item.querySelector('.arrow-line').setAttribute('stroke', color); updateSingleArrow(item); }}),
                 'gridBg': () => document.body.style.background = color,
                 'gridLines': () => grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`
@@ -1987,7 +1965,6 @@
 
             if (actions[targetType]) {
                 actions[targetType]();
-                recordState();
                 updateCustomizePanel();
             }
         }
@@ -1998,7 +1975,7 @@
 
             if (isEditing && activeEditingElement) {
                 targetType = 'text';
-                initialColor = getComputedStyle(activeEditingElement).color;
+                initialColor = getCommonStyleInSelection()?.color || '#333333';
             } else if (lastSelectedItem?.classList.contains('block')) {
                 targetType = 'blockBg';
                 initialColor = getComputedStyle(lastSelectedItem).backgroundColor;
@@ -2051,11 +2028,12 @@
         }
 
         function saveCurrentPageState() {
+            if (isEditing) finishEditing(); // Save any pending edits
             if (pages.length === 0 || currentPageIndex < 0) return;
             pages[currentPageIndex] = {
                 blocks: Array.from(document.querySelectorAll('.block')).map(block => ({
                     id: block.id,
-                    htmlContent: block.querySelector('.block-content').innerHTML,
+                    contentModel: block.contentModel,
                     x: parseInt(block.style.left),
                     y: parseInt(block.style.top),
                     width: block.style.width,
@@ -2230,15 +2208,14 @@
                         await page.render({ canvasContext: context, viewport: viewport }).promise;
 
                         const imageDataUrl = canvas.toDataURL();
-                        const htmlContent = `<img src="${imageDataUrl}" style="width: 100%; height: auto; display: block;">`;
-
+                        
                         const newPage = {
                             blocks: [{
                                 x: blockX,
                                 y: blockY,
                                 width: `${viewport.width}px`,
                                 height: `${viewport.height}px`,
-                                htmlContent: htmlContent,
+                                contentModel: [{ text: `<img src="${imageDataUrl}" style="width: 100%; height: auto; display: block;">`, style: {}, isHTML: true }],
                                 id: `block-slide-${importStartIndex + i - 1}-${blockCounter++}`
                             }],
                             arrows: [],
@@ -2265,7 +2242,7 @@
         function saveAllPages() {
             saveCurrentPageState();
             const state = {
-                formatVersion: "2.0",
+                formatVersion: "3.0",
                 pages: pages
             };
             download('mentmap-presentation.json', JSON.stringify(state, null, 2));
@@ -2281,7 +2258,7 @@
                     if (loadedData.pages && Array.isArray(loadedData.pages)) {
                         pages = loadedData.pages;
                     } else {
-                        pages = [loadedData];
+                        pages = [loadedData]; // Handle legacy format
                     }
                     loadPage(0, true);
                     history = [];
@@ -2309,7 +2286,7 @@
                     y: parseInt(block.style.top) + offset,
                     width: block.style.width,
                     height: block.style.height,
-                    htmlContent: block.querySelector('.block-content').innerHTML,
+                    contentModel: JSON.parse(JSON.stringify(block.contentModel)),
                     bgColor: block.style.backgroundColor,
                     borderColor: block.style.borderColor,
                     handleColor: block.style.getPropertyValue('--handle-color'),
@@ -2516,7 +2493,6 @@
                 document.addEventListener('mouseup', onMouseUp, { once: true });
             });
 
-            // --- Color Conversion Helpers ---
             function hsvToRgb(h, s, v) {
                 let r, g, b, i, f, p, q, t;
                 i = Math.floor(h / 60); f = h / 60 - i; p = v * (1 - s); q = v * (1 - f * s); t = v * (1 - (1 - f) * s);
@@ -2534,6 +2510,7 @@
                 return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r:0,g:0,b:0};
             }
             function parseRgba(rgba) {
+                if (!rgba) return {r:0,g:0,b:0,a:1};
                 const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
                 return match ? {r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]), a: match[4] !== undefined ? parseFloat(match[4]) : 1} : {r:255, g:255, b:255, a:1};
             }
@@ -2557,6 +2534,227 @@
                 }
             };
         }
+
+        // --- NEW TEXT EDITING ENGINE ---
+
+        function renderContent(model, element) {
+            element.innerHTML = '';
+            if (!model || model.length === 0) {
+                // Ensure the element isn't completely empty, which can cause editing issues
+                element.innerHTML = '<br>';
+                return;
+            }
+            model.forEach(span => {
+                if (span.isHTML) {
+                    element.insertAdjacentHTML('beforeend', span.text);
+                    return;
+                }
+                const spanEl = document.createElement('span');
+                // Use textContent to prevent XSS
+                spanEl.textContent = span.text.replace(/\s/g, '\u00A0'); // Replace spaces with non-breaking spaces
+                
+                Object.entries(span.style).forEach(([key, value]) => {
+                    // Convert camelCase to kebab-case for CSS properties
+                    const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+                    if (value) {
+                         spanEl.style[key] = value;
+                    }
+                });
+                element.appendChild(spanEl);
+            });
+        }
+
+        function parseContent(element, initialHTML = null) {
+            const model = [];
+            const source = initialHTML ? document.createElement('div') : element;
+            if (initialHTML) source.innerHTML = initialHTML;
+
+            source.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    if (node.textContent) model.push({ text: node.textContent, style: {} });
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    const style = {};
+                    const computedStyle = window.getComputedStyle(node);
+                    if (computedStyle.fontWeight === '700' || computedStyle.fontWeight === 'bold') style.fontWeight = 'bold';
+                    if (computedStyle.fontStyle === 'italic') style.fontStyle = 'italic';
+                    if (computedStyle.textDecorationLine === 'underline') style.textDecoration = 'underline';
+                    if (computedStyle.fontSize) style.fontSize = computedStyle.fontSize;
+                    if (computedStyle.fontFamily) style.fontFamily = computedStyle.fontFamily;
+                    if (computedStyle.color) style.color = computedStyle.color;
+
+                    model.push({ text: node.textContent, style });
+                }
+            });
+            return mergeModel(model);
+        }
+
+        function getSelectionIndices(parentElement) {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0) return { start: 0, end: 0 };
+            const range = selection.getRangeAt(0);
+            
+            let start = 0, end = 0;
+            const preSelectionRange = document.createRange();
+            preSelectionRange.selectNodeContents(parentElement);
+            preSelectionRange.setEnd(range.startContainer, range.startOffset);
+            start = preSelectionRange.toString().length;
+            end = start + range.toString().length;
+            
+            return { start, end };
+        }
+
+        function restoreSelection(indices) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            const range = document.createRange();
+            
+            let charIndex = 0;
+            let startNode = null, startOffset = 0;
+            let endNode = null, endOffset = 0;
+            
+            function findNodeAndOffset(targetIndex) {
+                for (const node of activeEditingElement.childNodes) {
+                    const nodeLength = node.textContent.length;
+                    if (charIndex + nodeLength >= targetIndex) {
+                        return { node: node.firstChild || node, offset: targetIndex - charIndex };
+                    }
+                    charIndex += nodeLength;
+                }
+                const lastChild = activeEditingElement.lastChild;
+                return { node: lastChild.firstChild || lastChild, offset: lastChild.textContent.length };
+            }
+            
+            const start = findNodeAndOffset(indices.start);
+            startNode = start.node;
+            startOffset = start.offset;
+
+            charIndex = 0; // Reset for end position
+            const end = findNodeAndOffset(indices.end);
+            endNode = end.node;
+            endOffset = end.offset;
+            
+            try {
+                range.setStart(startNode, startOffset);
+                range.setEnd(endNode, endOffset);
+                selection.addRange(range);
+            } catch (e) {
+                console.error("Failed to restore selection.", e);
+            }
+        }
+
+        function applyStyleToSelection(styleToApply) {
+            if (!isEditing) return;
+
+            const selectionIndices = getSelectionIndices(activeEditingElement);
+            const { start, end } = selectionIndices;
+            
+            let newModel = [];
+            let currentIndex = 0;
+
+            activeContentModel.forEach(span => {
+                const spanStart = currentIndex;
+                const spanEnd = spanStart + span.text.length;
+                
+                // Case 1: Span is completely outside the selection
+                if (spanEnd <= start || spanStart >= end) {
+                    newModel.push(span);
+                } else {
+                // Case 2: Span is affected by the selection
+                    const beforeText = span.text.substring(0, start - spanStart);
+                    const selectedText = span.text.substring(Math.max(0, start - spanStart), end - spanStart);
+                    const afterText = span.text.substring(end - spanStart);
+                    
+                    if (beforeText) newModel.push({ text: beforeText, style: { ...span.style } });
+
+                    if (selectedText) {
+                        const newStyle = { ...span.style };
+                        for (const key in styleToApply) {
+                            // Toggle logic for bold, italic, underline
+                            if (['fontWeight', 'fontStyle', 'textDecoration'].includes(key)) {
+                                if (newStyle[key] === styleToApply[key]) {
+                                    delete newStyle[key]; // Toggle off
+                                } else {
+                                    newStyle[key] = styleToApply[key]; // Toggle on
+                                }
+                            } else {
+                                newStyle[key] = styleToApply[key]; // Apply other styles directly
+                            }
+                            // Unset font size if it matches default
+                             if (key === 'fontSize' && styleToApply[key] === '16px') {
+                                delete newStyle[key];
+                            }
+                        }
+                        newModel.push({ text: selectedText, style: newStyle });
+                    }
+                    
+                    if (afterText) newModel.push({ text: afterText, style: { ...span.style } });
+                }
+                currentIndex = spanEnd;
+            });
+            
+            activeContentModel = mergeModel(newModel);
+            renderContent(activeContentModel, activeEditingElement);
+            restoreSelection(selectionIndices);
+            recordState(); // Record state after model modification
+        }
+        
+        function mergeModel(model) {
+            if (model.length < 2) return model;
+            const merged = [model[0]];
+            for (let i = 1; i < model.length; i++) {
+                const prev = merged[merged.length - 1];
+                const current = model[i];
+                if (JSON.stringify(prev.style) === JSON.stringify(current.style) && !prev.isHTML && !current.isHTML) {
+                    prev.text += current.text;
+                } else {
+                    merged.push(current);
+                }
+            }
+            return merged.filter(span => span.text.length > 0);
+        }
+        
+        function getCommonStyleInSelection() {
+            if (!isEditing) return null;
+            const { start, end } = getSelectionIndices(activeEditingElement);
+            if (start === end) return getStyleAtCharacterIndex(start > 0 ? start - 1 : 0);
+
+            let commonStyle = null;
+            let currentIndex = 0;
+            for (const span of activeContentModel) {
+                const spanStart = currentIndex;
+                const spanEnd = spanStart + span.text.length;
+                if (spanEnd > start && spanStart < end) { // If span overlaps with selection
+                    if (commonStyle === null) {
+                        commonStyle = { ...span.style };
+                    } else {
+                        // Keep only common styles
+                        for (const key in commonStyle) {
+                            if (commonStyle[key] !== span.style[key]) {
+                                delete commonStyle[key];
+                            }
+                        }
+                    }
+                }
+                currentIndex = spanEnd;
+            }
+            return commonStyle || {};
+        }
+
+        function getStyleAtCharacterIndex(index) {
+            let currentIndex = 0;
+            for (const span of activeContentModel) {
+                if (index < currentIndex + span.text.length) {
+                    return span.style;
+                }
+                currentIndex += span.text.length;
+            }
+            return activeContentModel[activeContentModel.length - 1]?.style || {};
+        }
+
+        function getStyleOfFirstCharacter(model) {
+            return model && model.length > 0 ? model[0].style : {};
+        }
+
 
         initialize();
     });
