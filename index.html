@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Canvas - MentMap</title>
+    <title>Interactive Canvas - MapMent</title>
 
     <style>
         * {
@@ -831,7 +831,7 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    { x: 540, y: 300, contentModel: [{ text: "MentMap: Faça seus materiais para apresentação e mapas mentais.", style: {} }], id: 'block-0' },
+                    { x: 540, y: 300, contentModel: [{ text: "MapMent: Faça seus materiais para apresentação e mapas mentais.", style: {} }], id: 'block-0' },
                     { x: 1140, y: 300, contentModel: [{ text: "É extremamente fácil fazê-los", style: {} }], id: 'block-1' }
                 ],
                 arrows: [],
@@ -2352,7 +2352,7 @@
                 formatVersion: "3.0",
                 pages: pages
             };
-            download('mentmap-presentation.json', JSON.stringify(state, null, 2));
+            download('mapment-presentation.json', JSON.stringify(state, null, 2));
         }
 
         function loadAllPages(event) {
