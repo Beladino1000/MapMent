@@ -189,7 +189,7 @@
             min-width: 200px;
             text-align: left;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: opacity 0.3s, transform 0.3s;
+            transition: opacity 0.3s, transform 0.3s, padding 0.3s, font-size 0.3s;
         }
         .coordinates.hidden {
             opacity: 0;
@@ -220,6 +220,7 @@
             z-index: 1000;
             opacity: 0.9;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: padding 0.3s, font-size 0.3s;
         }
         .shortcut-hint kbd {
             background: #555;
@@ -242,6 +243,36 @@
         #context-menu ul { list-style: none; padding: 0; margin: 0; }
         #context-menu li { padding: 8px 15px; color: white; cursor: pointer; border-radius: 5px; font-size: 14px; }
         #context-menu li:hover { background: #3498db; }
+        #context-menu .menu-header {
+            color: #aaa;
+            font-size: 12px;
+            padding: 8px 15px 4px;
+            cursor: default;
+            text-transform: uppercase;
+        }
+        #context-menu li.menu-header:hover {
+            background: transparent;
+        }
+        #context-menu .has-submenu {
+            position: relative;
+        }
+        #context-menu .has-submenu .submenu {
+            display: none;
+            position: absolute;
+            left: 100%;
+            top: -5px; /* Adjust for parent's padding */
+            background: rgba(50, 50, 50, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 5px 5px 20px rgba(0,0,0,0.4);
+            list-style: none;
+            min-width: 160px;
+            z-index: 3001;
+        }
+        #context-menu .has-submenu:hover > .submenu {
+            display: block;
+        }
 
         .marquee-box {
             position: fixed;
@@ -291,7 +322,7 @@
             flex-direction: column;
             font-size: 14px;
             overflow-y: auto;
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
         }
         .sidebar.hidden {
             transform: translateX(100%);
@@ -557,6 +588,41 @@
         }
         .color-picker-footer button:hover { background: #666; }
         .color-picker-footer button.confirm-btn:hover { background: #3498db; }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 260px;
+                font-size: 13px;
+            }
+            .sidebar-section h4 {
+                font-size: 11px;
+            }
+            .control-btn {
+                font-size: 13px;
+                padding: 8px;
+            }
+
+            .coordinates {
+                bottom: 10px;
+                left: 10px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+                min-width: 180px;
+            }
+            .coordinates input {
+                width: 60px;
+            }
+
+            .shortcut-hint {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            .shortcut-hint kbd {
+                padding: 1px 4px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -652,13 +718,24 @@
 
     <div id="context-menu">
         <ul>
-            <li data-action="add-text">Add Text Block</li>
-            <li data-action="add-image">Insert Image/Video File</li>
-            <li data-action="add-link">Insert Video from Link</li>
-            <li data-action="add-desmos">Insert Desmos from Link</li>
-            <li data-action="add-doc-file">Insert Document File (.docx)</li>
-            <li data-action="add-doc-link">Insert Google Doc/PDF Link</li>
-            <li data-action="import-presentation">Import Presentation (PDF/PPTX)</li>
+            <li class="menu-header">Add</li>
+            <li data-action="add-text">Text Block</li>
+            <li class="has-submenu">
+                From File >
+                <ul class="submenu">
+                    <li data-action="add-media-file">Image / Video</li>
+                    <li data-action="import-pdf-file">PDF as Slides</li>
+                </ul>
+            </li>
+            <li class="has-submenu">
+                From Link >
+                <ul class="submenu">
+                    <li data-action="add-media-link">Image / Video</li>
+                    <li data-action="add-pdf-link">PDF as Slides</li>
+                    <li data-action="add-desmos-link">Desmos</li>
+                    <li data-action="add-geogebra-link">GeoGebra</li>
+                </ul>
+            </li>
         </ul>
     </div>
     
@@ -691,7 +768,6 @@
     </div>
 
 
-<script src="https://unpkg.com/mammoth@1.5.1/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
 
 <script>
@@ -1161,7 +1237,7 @@
                     lastBlockCreationAction = () => addNewBlock('New text block.');
                     lastBlockCreationAction();
                 },
-                'add-image': () => {
+                'add-media-file': () => {
                     const fileInput = document.createElement('input');
                     fileInput.type = 'file';
                     fileInput.accept = 'image/*,video/*';
@@ -1201,26 +1277,74 @@
                     };
                     lastBlockCreationAction();
                 },
-                'add-link': () => {
-                    const createLinkBlock = () => {
-                        const url = prompt('Enter YouTube, Vimeo, or Google Drive video URL:');
-                        if (url) {
-                            let embedUrl;
-                            if (url.includes('youtube.com/watch?v=')) embedUrl = `https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`;
-                            else if (url.includes('youtu.be/')) embedUrl = `https://www.youtube.com/embed/${new URL(url).pathname.slice(1)}`;
-                            else if (url.includes('vimeo.com/')) embedUrl = `https://player.vimeo.com/video/${new URL(url).pathname.slice(1)}`;
-                            else if (url.includes('drive.google.com/file/d/')) {
-                                const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-                                if (match && match[1]) embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
-                            }
-                            if (embedUrl) addNewBlock(`<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`, { width: '560px', height: '315px' });
-                            else showToast('Invalid or unsupported video URL.');
+                 'import-pdf-file': () => {
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = '.pdf';
+                    fileInput.onchange = e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            importPdfFromFile(file);
                         }
                     };
-                    lastBlockCreationAction = createLinkBlock;
+                    fileInput.click();
+                },
+                'add-media-link': () => {
+                    const createMediaLinkBlock = () => {
+                        const url = prompt('Enter Image or Video URL (YouTube, Vimeo, etc.):');
+                        if (!url) return;
+
+                        let embedUrl;
+                        if (url.includes('youtube.com/watch?v=')) embedUrl = `https://www.youtube.com/embed/${new URL(url).searchParams.get('v')}`;
+                        else if (url.includes('youtu.be/')) embedUrl = `https://www.youtube.com/embed/${new URL(url).pathname.slice(1)}`;
+                        else if (url.includes('vimeo.com/')) embedUrl = `https://player.vimeo.com/video/${new URL(url).pathname.slice(1)}`;
+                        else if (url.includes('drive.google.com/file/d/')) {
+                            const match = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+                            if (match && match[1]) embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
+                        }
+
+                        if (embedUrl) {
+                            addNewBlock(`<iframe src="${embedUrl}" allow="autoplay; fullscreen"></iframe>`, { width: '560px', height: '315px' });
+                        } else {
+                            const img = new Image();
+                            img.onload = () => {
+                                const aspectRatio = img.height / img.width;
+                                const maxWidth = 800;
+                                const newWidth = Math.min(img.width, maxWidth);
+                                const newHeight = newWidth * aspectRatio;
+                                const html = `<img src="${url}" alt="User content">`;
+                                addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
+                            };
+                            img.onerror = () => {
+                                showToast('Could not load image or video from the URL.');
+                            };
+                            img.src = url;
+                        }
+                    };
+                    lastBlockCreationAction = createMediaLinkBlock;
                     lastBlockCreationAction();
                 },
-                'add-desmos': () => {
+                'add-pdf-link': () => {
+                    const createPdfLinkBlock = () => {
+                        const url = prompt('Enter PDF URL to import as slides:');
+                        if (url) {
+                            showToast('Fetching PDF from URL...', 5000);
+                            fetch(url)
+                                .then(response => {
+                                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                                    return response.arrayBuffer();
+                                })
+                                .then(arrayBuffer => processPdfData(arrayBuffer, url))
+                                .catch(e => {
+                                    console.error("Error fetching PDF from URL:", e);
+                                    showToast('Failed to fetch or process PDF. Check CORS policy or URL.');
+                                });
+                        }
+                    };
+                    lastBlockCreationAction = createPdfLinkBlock;
+                    lastBlockCreationAction();
+                },
+                'add-desmos-link': () => {
                     const createDesmosBlock = () => {
                         const desmosUrl = prompt('Enter the Desmos graph URL:');
                         if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) addNewBlock(`<iframe src="${desmosUrl}"></iframe>`, { width: '600px', height: '400px' });
@@ -1229,69 +1353,17 @@
                     lastBlockCreationAction = createDesmosBlock;
                     lastBlockCreationAction();
                 },
-                'add-doc-file': () => {
-                    const docFileInput = document.createElement('input');
-                    docFileInput.type = 'file';
-                    docFileInput.accept = '.docx';
-                    lastBlockCreationAction = () => docFileInput.click();
-                    docFileInput.onchange = e => {
-                        const file = e.target.files[0];
-                        if (file && window.mammoth) {
-                            const reader = new FileReader();
-                            reader.onload = res => {
-                                mammoth.convertToHtml({ arrayBuffer: res.target.result })
-                                    .then(result => {
-                                        const docHtml = `<div style="padding: 20px; font-family: serif; line-height: 1.6; background: white; height: 100%; overflow-y: auto;">${result.value}</div>`;
-                                        addNewBlock(docHtml, { width: '800px', height: '600px' });
-                                    })
-                                    .catch(err => {
-                                        console.error("Error converting docx:", err);
-                                        showToast("Could not convert the DOCX file.");
-                                    });
-                            };
-                            reader.readAsArrayBuffer(file);
+                'add-geogebra-link': () => {
+                    const createGeoGebraBlock = () => {
+                        const geoGebraUrl = prompt('Enter the GeoGebra applet URL (e.g., from share > embed):');
+                        if (geoGebraUrl && geoGebraUrl.includes('geogebra.org')) {
+                            addNewBlock(`<iframe src="${geoGebraUrl}" style="border:0px;width:100%;height:100%;" allowfullscreen></iframe>`, { width: '600px', height: '450px' });
+                        } else if (geoGebraUrl) {
+                            showToast('Invalid GeoGebra URL.');
                         }
                     };
+                    lastBlockCreationAction = createGeoGebraBlock;
                     lastBlockCreationAction();
-                },
-                'add-doc-link': () => {
-                    const createDocLinkBlock = () => {
-                        const docUrl = prompt('Enter Google Doc or PDF share URL:');
-                        if (docUrl) {
-                            let embedUrl;
-                            const match = docUrl.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
-                            if (match && match[1]) {
-                                embedUrl = `https://docs.google.com/document/d/${match[1]}/edit?embedded=true`;
-                            } else if (docUrl.toLowerCase().endsWith('.pdf')) {
-                                embedUrl = docUrl;
-                            }
-
-                            if (embedUrl) {
-                                const iframeHtml = `<iframe src="${embedUrl}" style="width:100%; height:100%; border:none;"></iframe>`;
-                                addNewBlock(iframeHtml, { width: '800px', height: '600px' });
-                            } else {
-                                showToast('Invalid Google Doc or PDF URL.');
-                            }
-                        }
-                    };
-                    lastBlockCreationAction = createDocLinkBlock;
-                    lastBlockCreationAction();
-                },
-                'import-presentation': () => {
-                    const fileInput = document.createElement('input');
-                    fileInput.type = 'file';
-                    fileInput.accept = '.pdf,.pptx';
-                    fileInput.onchange = e => {
-                        const file = e.target.files[0];
-                        if (file) {
-                            if (file.name.toLowerCase().endsWith('.pdf')) {
-                                importPdf(file);
-                            } else if (file.name.toLowerCase().endsWith('.pptx')) {
-                                showToast('PPTX import is not yet implemented.', 3000);
-                            }
-                        }
-                    };
-                    fileInput.click();
                 }
             };
 
@@ -2199,84 +2271,79 @@
             if (currentPageIndex > 0) loadPage(currentPageIndex - 1);
         }
 
-        async function importPdf(file) {
-            showToast(`Importing ${file.name}... This may take a moment.`, 10000);
+        function importPdfFromFile(file) {
             const fileReader = new FileReader();
-
-            fileReader.onload = async function() {
-                try {
-                    const pdfData = this.result;
-                    const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-
-                    const wasEmpty = pages.length === 1 && pages[0].blocks.length === 0;
-                    if (wasEmpty) {
-                        pages.shift(); // Remove the initial empty page
-                    } else {
-                        saveCurrentPageState(); // Save the current state before adding new pages
-                    }
-
-                    const importStartIndex = pages.length;
-
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const renderScale = 2.0; // Render at higher resolution for better quality
-                        const viewport = page.getViewport({ scale: renderScale });
-                        
-                        // Create a canvas to render the page onto
-                        const canvas = document.createElement('canvas');
-                        const context = canvas.getContext('2d');
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-
-                        // Render the page
-                        const renderContext = {
-                            canvasContext: context,
-                            viewport: viewport
-                        };
-                        await page.render(renderContext).promise;
-
-                        // Convert canvas to an image
-                        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9); // Use JPEG for smaller file size
-                        
-                        // Define block size and position
-                        const maxWidth = 1200; // Max width of the block on the canvas
-                        const blockWidth = viewport.width / renderScale > maxWidth ? maxWidth : viewport.width / renderScale;
-                        const blockHeight = blockWidth * (viewport.height / viewport.width);
-
-                        const gridCenter = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
-                        const blockX = Math.max(0, gridCenter.x - blockWidth / 2);
-                        const blockY = Math.max(0, gridCenter.y - blockHeight / 2);
-                        
-                        const imageHtml = `<img src="${imageDataUrl}" style="width:100%; height:100%;" alt="PDF Page ${i}">`;
-                        
-                        const newPage = {
-                            blocks: [{
-                                x: blockX,
-                                y: blockY,
-                                width: `${blockWidth}px`,
-                                height: `${blockHeight}px`,
-                                contentModel: [{ text: imageHtml, style: {}, isHTML: true }],
-                                id: `block-slide-${importStartIndex + i - 1}-${blockCounter++}`
-                            }],
-                            arrows: [],
-                            viewport: { gridX: 0, gridY: 0, scale: 1 },
-                            styles: {
-                                gridBg: document.body.style.background,
-                                gridLines: grid.style.backgroundImage,
-                            }
-                        };
-                        pages.push(newPage);
-                    }
-
-                    loadPage(importStartIndex, true); // Load the first of the newly imported pages
-                    recordState();
-                    showToast(`Successfully imported ${pdf.numPages} slides.`, 3000);
-                } catch (error) {
-                    console.error('Error importing PDF:', error);
-                    showToast('Failed to import PDF. See console for details.', 3000);
-                }
+            fileReader.onload = function() {
+                processPdfData(this.result, file.name);
             };
             fileReader.readAsArrayBuffer(file);
+        }
+
+        async function processPdfData(pdfData, sourceName) {
+            showToast(`Importing ${sourceName}... This may take a moment.`, 10000);
+            try {
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+                const wasEmpty = pages.length === 1 && pages[0].blocks.length === 0;
+                if (wasEmpty) {
+                    pages.shift();
+                } else {
+                    saveCurrentPageState();
+                }
+
+                const importStartIndex = pages.length;
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const renderScale = 2.0;
+                    const viewport = page.getViewport({ scale: renderScale });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    const renderContext = { canvasContext: context, viewport: viewport };
+                    await page.render(renderContext).promise;
+
+                    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    const maxWidth = 1200;
+                    const blockWidth = viewport.width / renderScale > maxWidth ? maxWidth : viewport.width / renderScale;
+                    const blockHeight = blockWidth * (viewport.height / viewport.width);
+
+                    const gridCenter = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
+                    const blockX = Math.max(0, gridCenter.x - blockWidth / 2);
+                    const blockY = Math.max(0, gridCenter.y - blockHeight / 2);
+                    
+                    const imageHtml = `<img src="${imageDataUrl}" style="width:100%; height:100%;" alt="PDF Page ${i}">`;
+                    
+                    const newPage = {
+                        blocks: [{
+                            x: blockX,
+                            y: blockY,
+                            width: `${blockWidth}px`,
+                            height: `${blockHeight}px`,
+                            contentModel: [{ text: imageHtml, style: {}, isHTML: true }],
+                            id: `block-slide-${importStartIndex + i - 1}-${blockCounter++}`
+                        }],
+                        arrows: [],
+                        viewport: { gridX: 0, gridY: 0, scale: 1 },
+                        styles: {
+                            gridBg: document.body.style.background,
+                            gridLines: grid.style.backgroundImage,
+                        }
+                    };
+                    pages.push(newPage);
+                }
+
+                loadPage(importStartIndex, true);
+                recordState();
+                showToast(`Successfully imported ${pdf.numPages} slides.`, 3000);
+            } catch (error) {
+                console.error('Error importing PDF:', error);
+                showToast('Failed to import PDF. See console for details.', 3000);
+            }
         }
 
         function saveAllPages() {
@@ -2804,3 +2871,4 @@
 </script>
 </body>
 </html>
+
