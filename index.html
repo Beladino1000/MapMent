@@ -176,17 +176,17 @@
         
         .coordinates {
             position: fixed; 
-            bottom: 20px; 
-            left: 20px;
+            bottom: 10px; 
+            left: 10px;
             background: rgba(40, 40, 40, 0.9);
             backdrop-filter: blur(10px);
             color: white; 
-            padding: 10px 15px;
-            border-radius: 10px; 
-            font-size: 0.9rem; 
+            padding: 8px 12px;
+            border-radius: 8px; 
+            font-size: 0.8rem; 
             z-index: 2001; 
             cursor: pointer;
-            min-width: 200px;
+            min-width: auto;
             text-align: left;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             transition: opacity 0.3s, transform 0.3s, padding 0.3s, font-size 0.3s;
@@ -197,7 +197,7 @@
             pointer-events: none;
         }
         .coordinates input {
-            width: 70px; 
+            width: 60px; 
             background: #333; 
             color: white; 
             border: 1px solid #555;
@@ -209,14 +209,14 @@
 
         .shortcut-hint {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
             background: rgba(40, 40, 40, 0.9);
             backdrop-filter: blur(10px);
             color: white;
-            padding: 10px 15px;
-            border-radius: 10px;
-            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
             z-index: 1000;
             opacity: 0.9;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
@@ -224,7 +224,7 @@
         }
         .shortcut-hint kbd {
             background: #555;
-            padding: 2px 6px;
+            padding: 1px 4px;
             border-radius: 4px;
             font-family: monospace;
             font-size: 0.85em;
@@ -311,7 +311,7 @@
             position: fixed;
             top: 0;
             right: 0;
-            width: 300px;
+            width: 240px;
             height: 100vh;
             background: rgba(40, 40, 40, 0.9);
             backdrop-filter: blur(10px);
@@ -320,7 +320,7 @@
             z-index: 2000;
             display: flex;
             flex-direction: column;
-            font-size: 14px;
+            font-size: 13px;
             overflow-y: auto;
             transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
         }
@@ -336,7 +336,7 @@
             border-bottom: none;
         }
         .sidebar-section h4 {
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             color: #aaa;
             margin-bottom: 15px;
@@ -395,7 +395,7 @@
             background: #555;
             color: white;
             border: 1px solid #666;
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
@@ -404,7 +404,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            font-size: 14px;
+            font-size: 13px;
         }
         .control-btn.active { background: #e74c3c; }
         .control-btn:hover { background: #3498db; }
@@ -589,40 +589,6 @@
         .color-picker-footer button:hover { background: #666; }
         .color-picker-footer button.confirm-btn:hover { background: #3498db; }
 
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 260px;
-                font-size: 13px;
-            }
-            .sidebar-section h4 {
-                font-size: 11px;
-            }
-            .control-btn {
-                font-size: 13px;
-                padding: 8px;
-            }
-
-            .coordinates {
-                bottom: 10px;
-                left: 10px;
-                padding: 8px 12px;
-                font-size: 0.8rem;
-                min-width: 180px;
-            }
-            .coordinates input {
-                width: 60px;
-            }
-
-            .shortcut-hint {
-                top: 10px;
-                left: 10px;
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
-            .shortcut-hint kbd {
-                padding: 1px 4px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -670,25 +636,6 @@
 
     <div class="sidebar">
         <div class="sidebar-section">
-            <h4>Slides</h4>
-            <div class="page-controls">
-                <button class="page-btn" id="prev-page-btn" title="Previous Page (←)">▲</button>
-                <span id="page-display">Page 1 / 1</span>
-                <button class="page-btn" id="next-page-btn" title="Next Page (→)">▼</button>
-                <button class="page-btn" id="add-page-btn" title="Add New Page (Shift +)">+</button>
-                <button class="page-btn" id="delete-page-btn" title="Delete Current Page (Shift -)">🗑️</button>
-            </div>
-        </div>
-        <div class="sidebar-section">
-            <h4>Actions</h4>
-            <div class="actions-grid">
-                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Adicionar conteúdo</span></button>
-                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Seta</span></button>
-                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Salvar</span></button>
-                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Carregar</span></button>
-            </div>
-        </div>
-        <div class="sidebar-section">
             <h4>Customize</h4>
             <div id="customize-content">
                 <div id="block-controls" class="control-group hidden"><h5>Block</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label><label><span>Border</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label></div>
@@ -712,6 +659,26 @@
                     <label><span>Size</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
                 </div>
                 <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <h4>Slides</h4>
+            <div class="page-controls">
+                <button class="page-btn" id="prev-page-btn" title="Previous Page (←)">▲</button>
+                <span id="page-display">Page 1 / 1</span>
+                <button class="page-btn" id="next-page-btn" title="Next Page (→)">▼</button>
+                <button class="page-btn" id="add-page-btn" title="Add New Page (Shift +)">+</button>
+                <button class="page-btn" id="delete-page-btn" title="Delete Current Page (Shift -)">🗑️</button>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <h4>Actions</h4>
+            <div class="actions-grid">
+                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Add Content</span></button>
+                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Arrow</span></button>
+                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Save</span></button>
+                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Load</span></button>
+                <button class="control-btn active" id="toggle-snap-btn"><span class="btn-icon">🧲</span><span>Grid Snap</span></button>
             </div>
         </div>
     </div>
@@ -792,10 +759,12 @@
         const deletePageBtn = document.getElementById('delete-page-btn');
         const pageDisplay = document.getElementById('page-display');
         const sidebar = document.querySelector('.sidebar');
+        const toggleSnapBtn = document.getElementById('toggle-snap-btn');
     
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
         let isResizing = false;
         let isMarqueeSelecting = false;
+        let isSnapEnabled = true;
         let resizeDirection = '';
         let resizeInitialRect = null; 
         let currentBlock = null, arrowStartBlock = null;
@@ -812,7 +781,6 @@
         let activeEditingElement = null; 
         let marqueeBox = null, marqueeStartX = 0, marqueeStartY = 0;
         
-        // Data model for the active block's content
         let activeContentModel = [];
         
         let pages = [];
@@ -872,6 +840,11 @@
             contextMenu.style.display = 'block';
         });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
+        toggleSnapBtn.addEventListener('click', () => {
+            isSnapEnabled = !isSnapEnabled;
+            toggleSnapBtn.classList.toggle('active', isSnapEnabled);
+            showToast(`Grid Snap ${isSnapEnabled ? 'Enabled' : 'Disabled'}`);
+        });
         saveBtn.addEventListener('click', saveAllPages);
         loadBtn.addEventListener('click', () => fileLoader.click());
         fileLoader.addEventListener('change', (e) => { loadAllPages(e); });
@@ -991,14 +964,13 @@
             if (config.handleColor) block.style.setProperty('--handle-color', config.handleColor);
             if (config.handleDisplay) block.style.setProperty('--handle-display', config.handleDisplay);
             
-            // Store data model on the element
             block.contentModel = config.contentModel || [];
 
             const contentEl = document.createElement('div');
             contentEl.className = 'block-content';
             block.appendChild(contentEl);
 
-            if (config.htmlContent) { // For backwards compatibility with old format
+            if (config.htmlContent) { 
                 block.contentModel = parseContent(contentEl, config.htmlContent);
             }
             
@@ -1188,8 +1160,6 @@
             }
             if (isEditing && activeEditingElement) {
                 const currentBlockEl = activeEditingElement.closest('.block');
-                // This logic ensures the editor only closes if you click outside of the
-                // block being edited, the sidebar, or the color picker.
                 if (!currentBlockEl.contains(e.target) && !e.target.closest('.sidebar') && !e.target.closest('#custom-color-picker')) {
                     finishEditing();
                     e.stopPropagation();
@@ -1493,17 +1463,10 @@
             }
         }
         
-        /**
-         * Saves text dynamically as the user types.
-         */
         function handleDynamicTextUpdate() {
             if (!isEditing || !activeEditingElement) return;
             const block = activeEditingElement.closest('.block');
-            
-            // Update the block's main data model from the live DOM
             block.contentModel = parseContent(activeEditingElement);
-            
-            // Also update the temporary working copy of the model used by styling functions
             activeContentModel = JSON.parse(JSON.stringify(block.contentModel));
         }
 
@@ -1514,10 +1477,10 @@
             sidebar.classList.remove('hidden');
             isEditing = true;
             activeEditingElement = contentEl;
-            activeContentModel = JSON.parse(JSON.stringify(block.contentModel)); // Work on a copy
+            activeContentModel = JSON.parse(JSON.stringify(block.contentModel)); 
 
             contentEl.contentEditable = true;
-            contentEl.addEventListener('input', handleDynamicTextUpdate); // Add listener for dynamic saving
+            contentEl.addEventListener('input', handleDynamicTextUpdate); 
             contentEl.focus();
             updateCustomizePanel();
         }
@@ -1526,9 +1489,8 @@
             if (!isEditing || !activeEditingElement) return;
             const block = activeEditingElement.closest('.block');
             
-            activeEditingElement.removeEventListener('input', handleDynamicTextUpdate); // Clean up listener
+            activeEditingElement.removeEventListener('input', handleDynamicTextUpdate); 
             
-            // Parse the final HTML back to the data model to ensure it's current
             block.contentModel = parseContent(activeEditingElement);
 
             isEditing = false;
@@ -1550,18 +1512,48 @@
             let newHeight = resizeInitialRect.height;
             let newLeft = resizeInitialRect.left;
             let newTop = resizeInitialRect.top;
+            
+            const gridSize = 30;
 
-            if (resizeDirection.includes('e')) newWidth = resizeInitialRect.width + dx;
+            if (resizeDirection.includes('e')) {
+                let tempWidth = resizeInitialRect.width + dx;
+                if (isSnapEnabled) {
+                    const newRight = resizeInitialRect.left + tempWidth;
+                    const snappedRight = Math.round(newRight / gridSize) * gridSize;
+                    newWidth = snappedRight - resizeInitialRect.left;
+                } else {
+                    newWidth = tempWidth;
+                }
+            }
             if (resizeDirection.includes('w')) {
-                newWidth = resizeInitialRect.width - dx;
-                newLeft = resizeInitialRect.left + dx;
+                let tempLeft = resizeInitialRect.left + dx;
+                if (isSnapEnabled) {
+                    newLeft = Math.round(tempLeft / gridSize) * gridSize;
+                } else {
+                    newLeft = tempLeft;
+                }
+                newWidth = resizeInitialRect.width + (resizeInitialRect.left - newLeft);
             }
-            if (resizeDirection.includes('s')) newHeight = resizeInitialRect.height + dy;
+            if (resizeDirection.includes('s')) {
+                let tempHeight = resizeInitialRect.height + dy;
+                if (isSnapEnabled) {
+                    const newBottom = resizeInitialRect.top + tempHeight;
+                    const snappedBottom = Math.round(newBottom / gridSize) * gridSize;
+                    newHeight = snappedBottom - resizeInitialRect.top;
+                } else {
+                    newHeight = tempHeight;
+                }
+            }
             if (resizeDirection.includes('n')) {
-                newHeight = resizeInitialRect.height - dy;
-                newTop = resizeInitialRect.top + dy;
+                let tempTop = resizeInitialRect.top + dy;
+                if (isSnapEnabled) {
+                    newTop = Math.round(tempTop / gridSize) * gridSize;
+                } else {
+                    newTop = tempTop;
+                }
+                newHeight = resizeInitialRect.height + (resizeInitialRect.top - newTop);
             }
-
+            
             const minSize = 50;
             if (newWidth >= minSize) {
                 currentBlock.style.width = `${newWidth}px`;
@@ -1583,26 +1575,32 @@
             dragInitialPositions.forEach(pos => {
                 const newX = pos.x + dx;
                 const newY = pos.y + dy;
-                pos.el.style.left = `${Math.max(0, Math.round(newX / gridSize) * gridSize)}px`;
-                pos.el.style.top = `${Math.max(0, Math.round(newY / gridSize) * gridSize)}px`;
+
+                if (isSnapEnabled) {
+                    pos.el.style.left = `${Math.max(0, Math.round(newX / gridSize) * gridSize)}px`;
+                    pos.el.style.top = `${Math.max(0, Math.round(newY / gridSize) * gridSize)}px`;
+                } else {
+                    pos.el.style.left = `${Math.max(0, newX)}px`;
+                    pos.el.style.top = `${Math.max(0, newY)}px`;
+                }
+                
+                const finalX = parseFloat(pos.el.style.left);
+                const finalY = parseFloat(pos.el.style.top);
+
+                const blockRight = finalX + pos.el.offsetWidth;
+                const blockBottom = finalY + pos.el.offsetHeight;
+                const expansionBuffer = 200;
+                const expansionAmount = 1000;
+
+                if (blockRight > grid.offsetWidth - expansionBuffer) {
+                    grid.style.width = `${grid.offsetWidth + expansionAmount}px`;
+                }
+                if (blockBottom > grid.offsetHeight - expansionBuffer) {
+                    grid.style.height = `${grid.offsetHeight + expansionAmount}px`;
+                }
+
                 updateArrowsForBlock(pos.el);
             });
-            
-            const expansionBuffer = 100;
-            const expansionAmount = 500;
-            let maxRight = 0;
-            let maxBottom = 0;
-            
-            selection.forEach(item => {
-                if(item.classList.contains('block')) {
-                    const rect = item.getBoundingClientRect();
-                    if(rect.right > maxRight) maxRight = rect.right;
-                    if(rect.bottom > maxBottom) maxBottom = rect.bottom;
-                }
-            });
-
-            if (maxRight > window.innerWidth - expansionBuffer) grid.style.width = `${grid.offsetWidth + expansionAmount}px`;
-            if (maxBottom > window.innerHeight - expansionBuffer) grid.style.height = `${grid.offsetHeight + expansionAmount}px`;
 
             updateCoordinates();
         }
@@ -1816,7 +1814,7 @@
             
             const color = arrowLine.getAttribute('stroke') || '#3498db';
             const strokeWidth = parseFloat(arrowLine.getAttribute('stroke-width')) || 3;
-            const headSize = strokeWidth * 3 + 5; // Proportional head size logic
+            const headSize = strokeWidth * 3 + 5; 
             
             const endMarkerUrl = arrowLine.getAttribute('marker-end');
             if (endMarkerUrl) {
@@ -1944,7 +1942,7 @@
                     nonColorInputs.linkSrc.value = hasIframe.src;
                 } else {
                     if (isEditing) updateTextControlsOnSelectionChange();
-                    else { // Update from model if not editing
+                    else { 
                         const styles = getStyleOfFirstCharacter(lastSelectedBlock.contentModel);
                         document.querySelector('[data-color-target="text"]').style.background = styles.color || '#333';
                     }
@@ -1998,7 +1996,6 @@
 
             const selection = window.getSelection();
             if (selection.rangeCount === 0 || selection.isCollapsed) {
-                // For a collapsed cursor, get style from character before it
                 const range = selection.getRangeAt(0);
                 const { index } = getSelectionIndices(activeEditingElement);
                 const styles = getStyleAtCharacterIndex(index > 0 ? index - 1 : 0);
@@ -2128,7 +2125,7 @@
         }
 
         function saveCurrentPageState() {
-            if (isEditing) finishEditing(); // Save any pending edits
+            if (isEditing) finishEditing();
             if (pages.length === 0 || currentPageIndex < 0) return;
             pages[currentPageIndex] = {
                 blocks: Array.from(document.querySelectorAll('.block')).map(block => ({
@@ -2177,7 +2174,6 @@
             document.querySelectorAll('.block').forEach(b => b.remove());
             svgCanvas.querySelectorAll('.arrow-group').forEach(ag => ag.remove());
             
-            // Clear defs but keep the selection glow filter
             const glowFilter = svgDefs.querySelector('#selection-glow');
             svgDefs.innerHTML = '';
             if (glowFilter) svgDefs.appendChild(glowFilter);
@@ -2365,7 +2361,7 @@
                     if (loadedData.pages && Array.isArray(loadedData.pages)) {
                         pages = loadedData.pages;
                     } else {
-                        pages = [loadedData]; // Handle legacy format
+                        pages = [loadedData];
                     }
                     loadPage(0, true);
                     history = [];
@@ -2506,7 +2502,6 @@
             document.body.removeChild(element);
         }
 
-        // --- Custom Color Picker Logic ---
         function createColorPicker() {
             const picker = document.getElementById('custom-color-picker');
             const header = picker.querySelector('.color-picker-header');
@@ -2527,7 +2522,6 @@
 
             function updateUI() {
                 const { r, g, b } = hsvToRgb(state.h, state.s, state.v);
-                const rgbaColor = `rgba(${r}, ${g}, ${b}, ${state.a})`;
                 
                 spectrum.style.background = `linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(${state.h}, 100%, 50%))`;
                 opacitySlider.style.background = `linear-gradient(to right, transparent, rgb(${r},${g},${b}))`;
@@ -2647,7 +2641,6 @@
         function renderContent(model, element) {
             element.innerHTML = '';
             if (!model || model.length === 0) {
-                // Ensure the element isn't completely empty, which can cause editing issues
                 element.innerHTML = '<br>';
                 return;
             }
@@ -2657,11 +2650,9 @@
                     return;
                 }
                 const spanEl = document.createElement('span');
-                // Use textContent to prevent XSS. No longer replacing spaces.
                 spanEl.textContent = span.text;
                 
                 Object.entries(span.style).forEach(([key, value]) => {
-                    // Convert camelCase to kebab-case for CSS properties
                     const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
                     if (value) {
                          spanEl.style[key] = value;
@@ -2737,7 +2728,7 @@
             startNode = start.node;
             startOffset = start.offset;
 
-            charIndex = 0; // Reset for end position
+            charIndex = 0; 
             const end = findNodeAndOffset(indices.end);
             endNode = end.node;
             endOffset = end.offset;
@@ -2766,11 +2757,9 @@
                 const spanStart = currentIndex;
                 const spanEnd = spanStart + span.text.length;
                 
-                // Case 1: Span is completely outside the selection
                 if (spanEnd <= start || spanStart >= end) {
                     newModel.push(span);
                 } else {
-                // Case 2: Span is affected by the selection
                     const beforeText = span.text.substring(0, start - spanStart);
                     const selectedText = span.text.substring(Math.max(0, start - spanStart), end - spanStart);
                     const afterText = span.text.substring(end - spanStart);
@@ -2780,17 +2769,15 @@
                     if (selectedText) {
                         const newStyle = { ...span.style };
                         for (const key in styleToApply) {
-                            // Toggle logic for bold, italic, underline
                             if (['fontWeight', 'fontStyle', 'textDecoration'].includes(key)) {
                                 if (newStyle[key] === styleToApply[key]) {
-                                    delete newStyle[key]; // Toggle off
+                                    delete newStyle[key]; 
                                 } else {
-                                    newStyle[key] = styleToApply[key]; // Toggle on
+                                    newStyle[key] = styleToApply[key];
                                 }
                             } else {
-                                newStyle[key] = styleToApply[key]; // Apply other styles directly
+                                newStyle[key] = styleToApply[key]; 
                             }
-                            // Unset font size if it matches default
                              if (key === 'fontSize' && styleToApply[key] === '16px') {
                                 delete newStyle[key];
                             }
@@ -2833,11 +2820,10 @@
             for (const span of activeContentModel) {
                 const spanStart = currentIndex;
                 const spanEnd = spanStart + span.text.length;
-                if (spanEnd > start && spanStart < end) { // If span overlaps with selection
+                if (spanEnd > start && spanStart < end) { 
                     if (commonStyle === null) {
                         commonStyle = { ...span.style };
                     } else {
-                        // Keep only common styles
                         for (const key in commonStyle) {
                             if (commonStyle[key] !== span.style[key]) {
                                 delete commonStyle[key];
