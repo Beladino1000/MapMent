@@ -259,6 +259,15 @@
             margin: 8px 0;
         }
 
+        .shortcut-hint .hint-line {
+            margin-bottom: 6px;
+        }
+        .shortcut-hint .hint-category {
+            font-weight: bold;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
         #context-menu {
             display: none;
             position: fixed;
@@ -509,25 +518,25 @@
     <div class="coordinates" id="coordinates">Nada selecionado</div>
 
     <div class="shortcut-hint" id="shortcut-hint" style="display: none;">
-        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br><hr>
-        <b>Navegação e Visualização:</b><br>
-        Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa<br>
-        Use o <kbd>Scroll</kbd> para dar zoom<br>
-        <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide<br>
-        <kbd>G</kbd> Esconder/Mostrar Painel Lateral<br>
-        <kbd>N</kbd> Esconder/Mostrar Coordenadas<br>
+        <div class="hint-line">Pressione <kbd>H</kbd> para mostrar/esconder os atalhos</div><hr>
+        <div class="hint-category">Navegação e Visualização:</div>
+        <div class="hint-line">Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa</div>
+        <div class="hint-line">Use o <kbd>Scroll</kbd> para dar zoom</div>
+        <div class="hint-line"><kbd>←</kbd> / <kbd>→</kbd> para mudar de slide</div>
+        <div class="hint-line"><kbd>G</kbd> Esconder/Mostrar Painel Lateral</div>
+        <div class="hint-line"><kbd>N</kbd> Esconder/Mostrar Coordenadas</div>
         <hr>
-        <b>Ações e Atalhos:</b><br>
-        <kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo<br>
-        <kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar<br>
-        <kbd>Shift</kbd> + <kbd>+</kbd> Adicionar Slide<br>
-        <kbd>Shift</kbd> + <kbd>-</kbd> Deletar Slide<br>
-        <kbd>B</kbd> Paleta de Cores Inteligente<br>
-        <kbd>Delete</kbd> Apagar itens<br>
-        <kbd>Ctrl</kbd> + <kbd>Z</kbd> Desfazer<br>
-        <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Refazer<br>
-        <kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar<br>
-        <kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar
+        <div class="hint-category">Ações e Atalhos:</div>
+        <div class="hint-line"><kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo</div>
+        <div class="hint-line"><kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar</div>
+        <div class="hint-line"><kbd>Shift</kbd> + <kbd>+</kbd> Adicionar Slide</div>
+        <div class="hint-line"><kbd>Shift</kbd> + <kbd>-</kbd> Deletar Slide</div>
+        <div class="hint-line"><kbd>B</kbd> Paleta de Cores Inteligente</div>
+        <div class="hint-line"><kbd>Delete</kbd> Apagar itens</div>
+        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>Z</kbd> Desfazer</div>
+        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Refazer</div>
+        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar</div>
+        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar</div>
     </div>
 
     <div class="sidebar">
@@ -695,21 +704,28 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    { x: 200, y: 300, width: '280px', contentModel: [{ text: "Bem-vindo ao MentMap! 👋\nDê um duplo clique aqui para editar o texto.", style: {} }], id: 'block-0' },
-                    { x: 600, y: 250, width: '280px', contentModel: [{ text: "Use a Roda do Mouse para dar zoom e segure SHIFT para mover o mapa.", style: {} }], id: 'block-1' },
-                    { x: 600, y: 450, width: '280px', contentModel: [{ text: "Clique com o botão direito para adicionar mais blocos, imagens ou links.", style: {} }], id: 'block-2' },
-                    { x: 1000, y: 350, width: '280px', contentModel: [{ text: "Para conectar ideias, ative o 'Modo Seta' ou segure CTRL e arraste de um bloco para outro.", style: {} }], id: 'block-3' }
+                    { x: 850, y: 450, width: '280px', contentModel: [{ text: "Bem-vindo ao MentMap! 👋\nDê um duplo clique aqui para editar o texto.", style: {} }], id: 'block-0' },
+                    { x: 1200, y: 300, width: '280px', contentModel: [{ text: "Use a Roda do Mouse para dar zoom e segure SHIFT para mover o mapa.", style: {} }], id: 'block-1' },
+                    { x: 1200, y: 600, width: '280px', contentModel: [{ text: "Clique com o botão direito para adicionar mais blocos, imagens ou links.", style: {} }], id: 'block-2' },
+                    { x: 1550, y: 450, width: '280px', contentModel: [{ text: "Para conectar ideias, ative o 'Modo Seta' ou segure CTRL e arraste entre os blocos.", style: {} }], id: 'block-3' },
+                    { x: 500, y: 300, width: '280px', contentModel: [{ text: "Use o painel lateral (G) para customizar cores, texto e mais.", style: {} }], id: 'block-4' },
+                    { x: 500, y: 600, width: '280px', contentModel: [{ text: "Crie apresentações! Use os controles de 'Slides' para adicionar ou navegar entre as telas.", style: {} }], id: 'block-5' },
+                    { x: 150, y: 450, width: '280px', contentModel: [{ text: "Salve seu progresso com Ctrl+S e carregue depois com Ctrl+L.", style: {} }], id: 'block-6' }
                 ],
                 arrows: [
-                    { startBlock: 'block-0', endBlock: 'block-1', color: '#3498db', width: '3' },
-                    { startBlock: 'block-0', endBlock: 'block-2', color: '#3498db', width: '3' },
+                    { startBlock: 'block-0', endBlock: 'block-1', color: '#0d82e8', width: '3' },
+                    { startBlock: 'block-0', endBlock: 'block-2', color: '#0d82e8', width: '3' },
+                    { startBlock: 'block-0', endBlock: 'block-4', color: '#0d82e8', width: '3' },
+                    { startBlock: 'block-0', endBlock: 'block-5', color: '#0d82e8', width: '3' },
                     { startBlock: 'block-1', endBlock: 'block-3', color: '#3498db', width: '3' },
-                    { startBlock: 'block-2', endBlock: 'block-3', color: '#3498db', width: '3' }
+                    { startBlock: 'block-2', endBlock: 'block-3', color: '#3498db', width: '3' },
+                    { startBlock: 'block-4', endBlock: 'block-6', color: '#3498db', width: '3' },
+                    { startBlock: 'block-5', endBlock: 'block-6', color: '#3498db', width: '3' }
                 ],
-                viewport: { gridX: -100, gridY: -100, scale: 0.9 },
+                viewport: { gridX: -700, gridY: -350, scale: 0.8 },
                 styles: {}
             };
-            blockCounter = 4;
+            blockCounter = 7;
             pages = [initialPage];
             currentPageIndex = 0;
             loadPage(0, true);
@@ -2762,3 +2778,4 @@
 </script>
 </body>
 </html>
+
