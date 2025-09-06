@@ -704,25 +704,30 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    { x: 850, y: 450, width: '280px', contentModel: [{ text: "Bem-vindo ao MentMap! 👋\nDê um duplo clique aqui para editar o texto.", style: {} }], id: 'block-0' },
-                    { x: 1200, y: 300, width: '280px', contentModel: [{ text: "Use a Roda do Mouse para dar zoom e segure SHIFT para mover o mapa.", style: {} }], id: 'block-1' },
-                    { x: 1200, y: 600, width: '280px', contentModel: [{ text: "Clique com o botão direito para adicionar mais blocos, imagens ou links.", style: {} }], id: 'block-2' },
-                    { x: 1550, y: 450, width: '280px', contentModel: [{ text: "Para conectar ideias, ative o 'Modo Seta' ou segure CTRL e arraste entre os blocos.", style: {} }], id: 'block-3' },
-                    { x: 500, y: 300, width: '280px', contentModel: [{ text: "Use o painel lateral (G) para customizar cores, texto e mais.", style: {} }], id: 'block-4' },
-                    { x: 500, y: 600, width: '280px', contentModel: [{ text: "Crie apresentações! Use os controles de 'Slides' para adicionar ou navegar entre as telas.", style: {} }], id: 'block-5' },
-                    { x: 150, y: 450, width: '280px', contentModel: [{ text: "Salve seu progresso com Ctrl+S e carregue depois com Ctrl+L.", style: {} }], id: 'block-6' }
+                    // Center
+                    { x: 900, y: 600, width: '280px', contentModel: [{ text: "Bem-vindo ao MentMap! 👋\nEste é o seu canvas infinito. Dê um duplo clique para editar.", style: {} }], id: 'block-0' },
+                    
+                    // Top Branch: Navigation
+                    { x: 900, y: 350, width: '280px', contentModel: [{ text: "NAVEGAÇÃO\nUse a Roda do Mouse para dar zoom. Segure SHIFT e arraste para mover o mapa.", style: {} }], id: 'block-1' },
+
+                    // Right Branch: Content Creation
+                    { x: 1300, y: 600, width: '280px', contentModel: [{ text: "ADICIONAR CONTEÚDO\nClique com o botão direito para adicionar blocos, imagens, vídeos e links incorporados (PDFs, Desmos).", style: {} }], id: 'block-2' },
+                    { x: 1300, y: 850, width: '280px', contentModel: [{ text: "CONECTAR IDEIAS\nAtive o 'Modo Seta' ou segure CTRL e arraste de um bloco para outro para criar uma conexão.", style: {} }], id: 'block-3' },
+
+                    // Left Branch: Customization & Management
+                    { x: 500, y: 350, width: '280px', contentModel: [{ text: "CUSTOMIZAÇÃO\nAbra o painel com 'G'. Selecione um item para ver suas opções. Dica: Pressione 'B' para uma paleta de cores inteligente!", style: {} }], id: 'block-4' },
+                    { x: 500, y: 600, width: '280px', contentModel: [{ text: "EDIÇÃO RÁPIDA\nDuplique com Shift+D, apague com Delete, e desfaça/refaça com Ctrl+Z.", style: {} }], id: 'block-5' },
+                    { x: 500, y: 850, width: '280px', contentModel: [{ text: "APRESENTAÇÕES E ARQUIVOS\nUse os controles de 'Slides' para criar uma apresentação. Salve (Ctrl+S) e Carregue (Ctrl+L) seu trabalho.", style: {} }], id: 'block-6' }
                 ],
                 arrows: [
                     { startBlock: 'block-0', endBlock: 'block-1', color: '#0d82e8', width: '3' },
                     { startBlock: 'block-0', endBlock: 'block-2', color: '#0d82e8', width: '3' },
+                    { startBlock: 'block-0', endBlock: 'block-3', color: '#0d82e8', width: '3' },
                     { startBlock: 'block-0', endBlock: 'block-4', color: '#0d82e8', width: '3' },
                     { startBlock: 'block-0', endBlock: 'block-5', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-1', endBlock: 'block-3', color: '#3498db', width: '3' },
-                    { startBlock: 'block-2', endBlock: 'block-3', color: '#3498db', width: '3' },
-                    { startBlock: 'block-4', endBlock: 'block-6', color: '#3498db', width: '3' },
-                    { startBlock: 'block-5', endBlock: 'block-6', color: '#3498db', width: '3' }
+                    { startBlock: 'block-0', endBlock: 'block-6', color: '#0d82e8', width: '3' }
                 ],
-                viewport: { gridX: -700, gridY: -350, scale: 0.8 },
+                viewport: { gridX: -850, gridY: -450, scale: 0.8 }, // Adjusted viewport to move map down and right
                 styles: {}
             };
             blockCounter = 7;
@@ -2778,4 +2783,5 @@
 </script>
 </body>
 </html>
+
 
