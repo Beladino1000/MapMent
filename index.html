@@ -1,31 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Canvas - MapMent</title>
+    <title>Canvas Interativo - MentMap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --glow-color: #0d82e8;
+            --background-start: #111827;
+            --background-end: #0c0d24;
+            --text-light: #f9fafb;
+            --text-muted: #9ca3af;
+            --panel-bg: rgba(23, 25, 43, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        @keyframes backgroundPan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         body {
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #000000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(90deg, var(--background-start), var(--background-end), var(--background-start));
+            background-size: 200% 200%;
+            animation: backgroundPan 30s ease infinite;
             height: 100vh;
             width: 100vw;
             display: flex;
-            color: #333;
+            color: var(--text-light);
             cursor: default;
-            transition: background 0.5s;
             user-select: none;
             -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
         }
         
         body.arrow-mode .block {
@@ -45,8 +63,7 @@
             left: 0;
             top: 0;
             background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
+                radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
             background-size: 30px 30px;
             background-position: top left;
             transform-origin: top left;
@@ -67,79 +84,88 @@
         #arrow-svg .arrow-group {
             pointer-events: all;
             cursor: pointer;
+            transition: filter 0.3s ease;
+        }
+        
+        #arrow-svg .arrow-line {
+             transition: stroke 0.3s ease, stroke-width 0.3s ease;
         }
 
         #arrow-svg .arrow-hitbox {
             stroke: transparent;
-            stroke-width: 15;
+            stroke-width: 20;
         }
 
         #arrow-svg .arrow-group.selected {
             filter: url(#selection-glow);
         }
+        #arrow-svg .arrow-group:hover .arrow-line {
+            stroke: var(--glow-color);
+        }
+
 
         .block {
             position: absolute;
-            width: 200px;
+            width: 250px;
             height: auto;
             min-height: 100px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid transparent;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            padding: 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            padding: 18px;
             cursor: grab;
             overflow: visible;
-            transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
-            user-select: none;
+            transition: border-color 0.3s, box-shadow 0.3s, transform 0.2s ease-out, background-color 0.3s;
             z-index: 10;
-            resize: none;
             display: flex;
             flex-direction: column;
+            color: var(--text-light);
         }
-
+        .block:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(13, 130, 232, 0.3);
+        }
+        
         .block.selected {
-            border-color: #3498db;
-            box-shadow: 0 0 15px rgba(52, 152, 219, 0.8);
+            border-color: var(--glow-color);
+            box-shadow: 0 0 25px rgba(13, 130, 232, 0.7);
         }
         
         .block.pre-selected {
-            outline: 2px dashed rgba(52, 152, 219, 0.5);
+            outline: 2px dashed rgba(13, 130, 232, 0.6);
         }
 
         .block-content {
             outline: none;
             padding: 5px;
-            line-height: 1.4;
+            line-height: 1.5;
             width: 100%;
             min-height: 30px;
             overflow-wrap: break-word;
             white-space: pre-wrap;
-            transition: color 0.3s, font-size 0.3s;
             flex-grow: 1;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             cursor: text;
+            font-size: 15px;
         }
 
         .block-content[contenteditable="true"] {
-            border: 1px dashed #3498db;
+            border: 1px dashed var(--glow-color);
             padding: 4px;
             user-select: text;
             -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
         }
 
         .block-content iframe,
         .block-content img,
         .block-content video {
             width: 100%;
-            height: 100%;
+            height: auto;
+            display: block;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: default;
         }
 
@@ -150,46 +176,45 @@
         
         .resize-handle {
             position: absolute;
-            width: 10px;
-            height: 10px;
-            background: var(--handle-color, rgba(128, 128, 128, 0.5));
+            width: 12px;
+            height: 12px;
+            background: var(--handle-color, rgba(255, 255, 255, 0.2));
             display: var(--handle-display, block);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            border: 2px solid var(--background-start);
             border-radius: 50%;
             z-index: 20;
-            opacity: 0.6;
-            transition: opacity 0.2s, background-color 0.2s;
+            opacity: 0;
+            transition: all 0.2s;
         }
         .block:hover .resize-handle {
             opacity: 1;
-            background-color: var(--handle-color, #3498db);
+            background-color: var(--handle-color, var(--glow-color));
         }
 
-        .handle-n { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-        .handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
-        .handle-e { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
-        .handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
-        .handle-s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-        .handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
-        .handle-w { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
-        .handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+        .handle-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .handle-ne { top: -6px; right: -6px; cursor: nesw-resize; }
+        .handle-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize; }
+        .handle-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .handle-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .handle-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize; }
+        .handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
         
         .coordinates {
             position: fixed; 
             bottom: 10px; 
             left: 10px;
-            background: rgba(40, 40, 40, 0.9);
+            background: var(--panel-bg);
             backdrop-filter: blur(10px);
-            color: white; 
+            color: var(--text-light); 
             padding: 8px 12px;
             border-radius: 8px; 
             font-size: 0.8rem; 
             z-index: 2001; 
             cursor: pointer;
-            min-width: auto;
-            text-align: left;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: opacity 0.3s, transform 0.3s, padding 0.3s, font-size 0.3s;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
         }
         .coordinates.hidden {
             opacity: 0;
@@ -198,164 +223,150 @@
         }
         .coordinates input {
             width: 60px; 
-            background: #333; 
+            background: rgba(0,0,0,0.3); 
             color: white; 
             border: 1px solid #555;
             border-radius: 5px; 
             padding: 2px 5px; 
             text-align: center;
-            margin: 0 2px;
         }
 
         .shortcut-hint {
             position: fixed;
             top: 10px;
             left: 10px;
-            background: rgba(40, 40, 40, 0.9);
+            background: var(--panel-bg);
             backdrop-filter: blur(10px);
-            color: white;
-            padding: 8px 12px;
+            color: var(--text-light);
+            padding: 10px 15px;
             border-radius: 8px;
             font-size: 0.8rem;
             z-index: 1000;
-            opacity: 0.9;
+            opacity: 0.95;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: padding 0.3s, font-size 0.3s;
+            border: 1px solid var(--border-color);
         }
         .shortcut-hint kbd {
-            background: #555;
-            padding: 1px 4px;
+            background: rgba(255,255,255,0.15);
+            padding: 2px 6px;
             border-radius: 4px;
             font-family: monospace;
-            font-size: 0.85em;
+            font-size: 0.9em;
+            border-bottom: 2px solid rgba(255,255,255,0.2);
+        }
+        .shortcut-hint hr {
+            border-color: var(--border-color);
+            margin: 8px 0;
         }
 
         #context-menu {
             display: none;
             position: fixed;
             z-index: 3000;
-            background: rgba(50, 50, 50, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(30, 32, 55, 0.85);
+            backdrop-filter: blur(16px);
             border-radius: 8px;
-            padding: 5px;
+            padding: 6px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            border: 1px solid var(--border-color);
         }
         #context-menu ul { list-style: none; padding: 0; margin: 0; }
-        #context-menu li { padding: 8px 15px; color: white; cursor: pointer; border-radius: 5px; font-size: 14px; }
-        #context-menu li:hover { background: #3498db; }
+        #context-menu li { padding: 9px 16px; color: var(--text-light); cursor: pointer; border-radius: 5px; font-size: 14px; transition: background-color 0.2s; }
+        #context-menu li:hover { background: var(--glow-color); }
         #context-menu .menu-header {
-            color: #aaa;
-            font-size: 12px;
+            color: var(--text-muted);
+            font-size: 11px;
             padding: 8px 15px 4px;
             cursor: default;
+            font-weight: 600;
             text-transform: uppercase;
         }
-        #context-menu li.menu-header:hover {
-            background: transparent;
-        }
-        #context-menu .has-submenu {
-            position: relative;
-        }
+        #context-menu li.menu-header:hover { background: transparent; }
+        #context-menu .has-submenu { position: relative; }
         #context-menu .has-submenu .submenu {
             display: none;
             position: absolute;
             left: 100%;
-            top: -5px; /* Adjust for parent's padding */
-            background: rgba(50, 50, 50, 0.9);
-            backdrop-filter: blur(10px);
+            top: -6px;
+            background: rgba(30, 32, 55, 0.85);
+            backdrop-filter: blur(16px);
             border-radius: 8px;
-            padding: 5px;
+            padding: 6px;
             box-shadow: 5px 5px 20px rgba(0,0,0,0.4);
             list-style: none;
             min-width: 160px;
             z-index: 3001;
+            border: 1px solid var(--border-color);
         }
-        #context-menu .has-submenu:hover > .submenu {
-            display: block;
-        }
+        #context-menu .has-submenu:hover > .submenu { display: block; }
 
         .marquee-box {
             position: fixed;
-            border: 1px dashed #3498db;
-            background: rgba(52, 152, 219, 0.2);
+            border: 1px dashed var(--glow-color);
+            background: rgba(13, 130, 232, 0.2);
             pointer-events: none;
             z-index: 9999;
         }
 
         .toast-notification {
             position: fixed;
-            bottom: 20px;
+            bottom: -100px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
+            background: linear-gradient(45deg, #2c3e50, #34495e);
             color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
+            padding: 12px 24px;
+            border-radius: 50px;
             z-index: 10000;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 500;
             opacity: 0;
-            transition: opacity 0.3s, bottom 0.3s;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
             pointer-events: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         }
         .toast-notification.show { opacity: 1; bottom: 100px; }
-
-        input, textarea {
-            user-select: auto;
-            -webkit-user-select: auto;
-            -moz-user-select: auto;
-            -ms-user-select: auto;
-        }
 
         .sidebar {
             position: fixed;
             top: 0;
             right: 0;
-            width: 240px;
+            width: 250px;
             height: 100vh;
-            background: rgba(40, 40, 40, 0.9);
-            backdrop-filter: blur(10px);
-            color: white;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            color: var(--text-light);
             box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+            border-left: 1px solid var(--border-color);
             z-index: 2000;
             display: flex;
             flex-direction: column;
             font-size: 13px;
             overflow-y: auto;
-            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .sidebar.hidden {
             transform: translateX(100%);
         }
 
-        .sidebar-section {
-            padding: 15px;
-            border-bottom: 1px solid #555;
-        }
-        .sidebar-section:last-child {
-            border-bottom: none;
-        }
+        .sidebar-section { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .sidebar-section:last-child { border-bottom: none; }
         .sidebar-section h4 {
             font-size: 11px;
             text-transform: uppercase;
-            color: #aaa;
+            color: var(--text-muted);
             margin-bottom: 15px;
             padding-bottom: 5px;
-            border-bottom: 1px solid #555;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .page-controls {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
+        .page-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; }
         .page-btn {
-            background: #555;
-            color: white;
-            border: 1px solid #777;
-            width: 35px;
-            height: 35px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             cursor: pointer;
             font-size: 18px;
@@ -365,37 +376,25 @@
             justify-content: center;
             transition: background-color 0.2s, transform 0.2s;
         }
-        .page-btn:hover {
-            background-color: #3498db;
-            transform: scale(1.1);
-        }
-        .page-btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-            background-color: #555;
-        }
+        .page-btn:hover { background-color: var(--glow-color); transform: scale(1.1); }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; background-color: rgba(255, 255, 255, 0.1); }
         #page-display {
             font-weight: 600;
             background: rgba(0,0,0,0.3);
-            padding: 5px 10px;
+            padding: 5px 12px;
             border-radius: 15px;
             min-width: 80px;
             text-align: center;
             margin: 5px 0;
         }
 
-        .actions-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .actions-grid { display: flex; flex-direction: column; gap: 10px; }
         .control-btn {
             width: 100%;
-            background: #555;
-            color: white;
-            border: 1px solid #666;
-            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+            padding: 10px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
@@ -406,91 +405,44 @@
             gap: 8px;
             font-size: 13px;
         }
-        .control-btn.active { background: #e74c3c; }
-        .control-btn:hover { background: #3498db; }
-        .control-btn:disabled {
-            background: #444;
-            color: #888;
-            cursor: not-allowed;
-        }
+        .control-btn.active { background: #e74c3c; box-shadow: 0 0 10px #e74c3c; }
+        .control-btn:hover { background: var(--glow-color); }
+        .control-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
 
         .control-group { margin-bottom: 15px; }
-        .control-group label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .color-picker-wrapper {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 1px solid #777;
-            cursor: pointer;
-        }
+        .control-group label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .color-picker-wrapper { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border-color); cursor: pointer; transition: transform 0.2s; }
+        .color-picker-wrapper:hover { transform: scale(1.15); }
         .control-group input[type="range"], .control-group input[type="number"], .control-group input[type="text"], .control-group input[type="checkbox"] {
             width: 120px;
-            background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;
+            background: rgba(0,0,0,0.3); color: white; border: 1px solid #666; border-radius: 4px; padding: 3px;
         }
         .control-group input[type="checkbox"] { width: auto; }
-        .text-format-buttons { 
-            display: flex; 
-            gap: 10px; 
-            margin-bottom: 12px;
-        }
-        .format-btn {
-            flex: 1; background: #555; border: 1px solid #666;
-            color: white; padding: 5px; border-radius: 4px; cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .format-btn:hover { background: #666; }
-        .format-btn.active { background-color: #3498db; }
+        .text-format-buttons { display: flex; gap: 10px; margin-bottom: 12px; }
+        .format-btn { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: white; padding: 5px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        .format-btn:hover { background: rgba(255,255,255,0.2); }
+        .format-btn.active { background-color: var(--glow-color); }
         .hidden { display: none !important; }
 
-        /* Custom Dropdown Styles */
         select {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            background-color: #444;
-            color: white;
-            border: 1px solid #666;
-            border-radius: 4px;
-            padding: 4px 8px;
-            padding-right: 25px; /* space for arrow */
-            width: 120px;
-            cursor: pointer;
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            background-color: rgba(0,0,0,0.3); color: white; border: 1px solid #666; border-radius: 4px; padding: 4px 8px; padding-right: 25px;
+            width: 120px; cursor: pointer;
             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat;
-            background-position: right 8px top 50%;
-            background-size: .65em auto;
+            background-repeat: no-repeat; background-position: right 8px top 50%; background-size: .65em auto;
         }
 
-        /* Custom Scrollbar Styles */
-        .sidebar::-webkit-scrollbar {
-            width: 10px;
-        }
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-        }
-        .sidebar::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 10px;
-            border: 2px solid transparent;
-            background-clip: content-box;
-        }
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: #3498db;
-        }
+        .sidebar::-webkit-scrollbar { width: 10px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: var(--glow-color); }
         
-        /* Custom Color Picker Styles */
         #custom-color-picker {
             position: fixed;
             width: 240px;
-            background: rgba(50, 50, 50, 0.95);
+            background: rgba(30, 32, 55, 0.9);
             backdrop-filter: blur(10px);
-            border: 1px solid #666;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             z-index: 4000;
@@ -499,95 +451,39 @@
             color: #eee;
         }
         .color-picker-header {
-            padding: 5px;
-            text-align: center;
-            font-weight: bold;
-            cursor: move;
-            background: rgba(255,255,255,0.1);
-            margin: -10px -10px 10px -10px;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-            border-bottom: 1px solid #666;
+            padding: 8px; text-align: center; font-weight: bold; cursor: move;
+            background: rgba(255,255,255,0.1); margin: -10px -10px 10px -10px;
+            border-top-left-radius: 8px; border-top-right-radius: 8px;
+            border-bottom: 1px solid var(--border-color);
         }
-        .color-picker-body {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .color-spectrum {
-            width: 100%;
-            height: 120px;
-            position: relative;
-            cursor: crosshair;
-            background: linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(0, 100%, 50%));
-        }
+        .color-picker-body { display: flex; flex-direction: column; gap: 10px; }
+        .color-spectrum { width: 100%; height: 120px; position: relative; cursor: crosshair; background: linear-gradient(to top, black, transparent), linear-gradient(to right, white, hsl(0, 100%, 50%)); }
         .spectrum-cursor {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 5px rgba(0,0,0,0.7);
-            pointer-events: none;
-            transform: translate(-50%, -50%);
+            position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.7), 0 0 0 2px black inset; pointer-events: none; transform: translate(-50%, -50%);
         }
-        .color-slider {
-            width: 100%;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 10px;
-            border-radius: 5px;
-            background: #555;
-            outline: none;
-        }
+        .color-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 10px; border-radius: 5px; background: #555; outline: none; }
         .hue-slider { background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red); }
         .opacity-slider { background: linear-gradient(to right, transparent, white); }
         .color-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: #fff;
-            cursor: pointer;
-            border: 1px solid #888;
+            -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+            background: #fff; cursor: pointer; border: 2px solid #333;
         }
-        .color-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px 10px;
-            align-items: center;
-        }
-        .color-inputs label { font-size: 12px; color: #aaa; }
+        .color-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; align-items: center; }
+        .color-inputs label { font-size: 12px; color: var(--text-muted); }
         .color-inputs input {
-            width: 100%;
-            background: #333;
-            border: 1px solid #666;
-            color: #fff;
-            border-radius: 4px;
-            padding: 4px;
-            text-align: center;
+            width: 100%; background: #333; border: 1px solid #666; color: #fff;
+            border-radius: 4px; padding: 4px; text-align: center;
         }
-        .color-inputs input[type="number"] {
-            -moz-appearance: textfield;
-        }
-        .color-inputs input[type="number"]::-webkit-inner-spin-button,
-        .color-inputs input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .color-picker-footer {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-        }
+        .color-inputs input[type="number"] { -moz-appearance: textfield; }
+        .color-inputs input[type="number"]::-webkit-inner-spin-button, .color-inputs input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .color-picker-footer { margin-top: 10px; display: flex; gap: 10px; }
         .color-picker-footer button {
-            flex: 1;
-            background: #555; color: white; border: 1px solid #777;
-            padding: 8px; border-radius: 5px; cursor: pointer;
+            flex: 1; background: rgba(255,255,255,0.1); color: var(--text-light); border: 1px solid var(--border-color);
+            padding: 8px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s;
         }
-        .color-picker-footer button:hover { background: #666; }
-        .color-picker-footer button.confirm-btn:hover { background: #3498db; }
+        .color-picker-footer button:hover { background: rgba(255,255,255,0.2); }
+        .color-picker-footer button.confirm-btn:hover { background: var(--glow-color); }
 
     </style>
 </head>
@@ -597,8 +493,8 @@
             <svg id="arrow-svg">
                 <defs>
                     <filter id="selection-glow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="blur"></feGaussianBlur>
-                        <feFlood flood-color="#3498db" result="color"></feFlood>
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"></feGaussianBlur>
+                        <feFlood flood-color="var(--glow-color)" result="color"></feFlood>
                         <feComposite in="color" in2="blur" operator="in" result="glow"></feComposite>
                         <feMerge>
                             <feMergeNode in="glow"></feMergeNode>
@@ -610,17 +506,17 @@
         </div>
     </div>
 
-    <div class="coordinates" id="coordinates">Nothing selected</div>
+    <div class="coordinates" id="coordinates">Nada selecionado</div>
 
     <div class="shortcut-hint" id="shortcut-hint" style="display: none;">
-        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br><hr style="border-color: #555; margin: 5px 0;">
+        Pressione <kbd>H</kbd> para mostrar/esconder os atalhos<br><hr>
         <b>Navegação e Visualização:</b><br>
         Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa<br>
         Use o <kbd>Scroll</kbd> para dar zoom<br>
         <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide<br>
         <kbd>G</kbd> Esconder/Mostrar Painel Lateral<br>
         <kbd>N</kbd> Esconder/Mostrar Coordenadas<br>
-        <hr style="border-color: #555; margin: 5px 0;">
+        <hr>
         <b>Ações e Atalhos:</b><br>
         <kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo<br>
         <kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar<br>
@@ -636,69 +532,69 @@
 
     <div class="sidebar">
         <div class="sidebar-section">
-            <h4>Customize</h4>
+            <h4>Customizar</h4>
             <div id="customize-content">
-                <div id="block-controls" class="control-group hidden"><h5>Block</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label><label><span>Border</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label></div>
-                <div id="handle-controls" class="control-group hidden"><h5>Handles</h5><label><span>Color</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span>Visible</span><input type="checkbox" id="handle-visible" checked></label></div>
+                <div id="block-controls" class="control-group hidden"><h5>Bloco</h5><label><span>Fundo</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label><label><span>Borda</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label></div>
+                <div id="handle-controls" class="control-group hidden"><h5>Alças</h5><label><span>Cor</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span>Visível</span><input type="checkbox" id="handle-visible" checked></label></div>
                 <div id="text-controls" class="control-group hidden">
-                    <h5>Text</h5>
+                    <h5>Texto</h5>
                     <div class="text-format-buttons">
                         <button id="bold-btn" class="format-btn"><b>B</b></button>
                         <button id="italic-btn" class="format-btn"><i>I</i></button>
                         <button id="underline-btn" class="format-btn"><u>U</u></button>
                     </div>
-                    <label><span>Color</span><div class="color-picker-wrapper" data-color-target="text"></div></label><label><span>Size (px)</span><select id="text-size"></select></label><label><span>Font</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Default</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
+                    <label><span>Cor</span><div class="color-picker-wrapper" data-color-target="text"></div></label><label><span>Tamanho (px)</span><select id="text-size"></select></label><label><span>Fonte</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Padrão</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
                 </div>
                 <div id="link-controls" class="control-group hidden">
-                    <h5>Embed Link</h5>
+                    <h5>Link Incorporado</h5>
                     <label><span>URL</span><input type="text" id="link-src"></label>
                 </div>
                 <div id="arrow-controls" class="control-group hidden">
-                    <h5>Arrow</h5>
-                    <label><span>Color</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label>
-                    <label><span>Size</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
+                    <h5>Seta</h5>
+                    <label><span>Cor</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label>
+                    <label><span>Tamanho</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
                 </div>
-                <div id="grid-controls" class="control-group"><h5>Grid</h5><label><span>Background</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span>Line Color</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
+                <div id="grid-controls" class="control-group"><h5>Grade</h5><label><span>Fundo</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span>Linhas</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
             </div>
         </div>
         <div class="sidebar-section">
             <h4>Slides</h4>
             <div class="page-controls">
-                <button class="page-btn" id="prev-page-btn" title="Previous Page (←)">▲</button>
-                <span id="page-display">Page 1 / 1</span>
-                <button class="page-btn" id="next-page-btn" title="Next Page (→)">▼</button>
-                <button class="page-btn" id="add-page-btn" title="Add New Page (Shift +)">+</button>
-                <button class="page-btn" id="delete-page-btn" title="Delete Current Page (Shift -)">🗑️</button>
+                <button class="page-btn" id="prev-page-btn" title="Slide Anterior (←)">▲</button>
+                <span id="page-display">Slide 1 / 1</span>
+                <button class="page-btn" id="next-page-btn" title="Próximo Slide (→)">▼</button>
+                <button class="page-btn" id="add-page-btn" title="Adicionar Novo Slide (Shift +)">+</button>
+                <button class="page-btn" id="delete-page-btn" title="Deletar Slide Atual (Shift -)">🗑️</button>
             </div>
         </div>
         <div class="sidebar-section">
-            <h4>Actions</h4>
+            <h4>Ações</h4>
             <div class="actions-grid">
-                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Add Content</span></button>
-                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Arrow</span></button>
-                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Save</span></button>
-                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Load</span></button>
-                <button class="control-btn active" id="toggle-snap-btn"><span class="btn-icon">🧲</span><span>Grid Snap</span></button>
+                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Adicionar</span></button>
+                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Modo Seta</span></button>
+                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Salvar</span></button>
+                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Carregar</span></button>
+                <button class="control-btn active" id="toggle-snap-btn"><span class="btn-icon">🧲</span><span>Encaixe</span></button>
             </div>
         </div>
     </div>
 
     <div id="context-menu">
         <ul>
-            <li class="menu-header">Add</li>
-            <li data-action="add-text">Text Block</li>
+            <li class="menu-header">Adicionar</li>
+            <li data-action="add-text">Bloco de Texto</li>
             <li class="has-submenu">
-                From File >
+                Do Arquivo >
                 <ul class="submenu">
-                    <li data-action="add-media-file">Image / Video</li>
-                    <li data-action="import-pdf-file">PDF as Slides</li>
+                    <li data-action="add-media-file">Imagem / Vídeo</li>
+                    <li data-action="import-pdf-file">PDF como Slides</li>
                 </ul>
             </li>
             <li class="has-submenu">
-                From Link >
+                Do Link >
                 <ul class="submenu">
-                    <li data-action="add-media-link">Image / Video</li>
-                    <li data-action="add-pdf-link">PDF as Slides</li>
+                    <li data-action="add-media-link">Imagem / Vídeo</li>
+                    <li data-action="add-pdf-link">PDF como Slides</li>
                     <li data-action="add-desmos-link">Desmos</li>
                     <li data-action="add-geogebra-link">GeoGebra</li>
                 </ul>
@@ -709,7 +605,7 @@
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
     <div id="custom-color-picker" class="hidden">
-        <div class="color-picker-header">Color Picker</div>
+        <div class="color-picker-header">Seletor de Cores</div>
         <div class="color-picker-body">
             <div class="color-spectrum" id="color-spectrum">
                 <div class="spectrum-cursor" id="spectrum-cursor"></div>
@@ -729,8 +625,8 @@
             </div>
         </div>
         <div class="color-picker-footer">
-            <button id="color-picker-cancel">Cancel</button>
-            <button id="color-picker-confirm" class="confirm-btn">Confirm</button>
+            <button id="color-picker-cancel">Cancelar</button>
+            <button id="color-picker-confirm" class="confirm-btn">Confirmar</button>
         </div>
     </div>
 
@@ -777,7 +673,7 @@
         let scale = 1;
         let tempArrow = null;
         let ctrlPressed = false;
-        let lastBlockCreationAction = () => addNewBlock('New block.');
+        let lastBlockCreationAction = () => addNewBlock('Novo bloco.');
         let activeEditingElement = null; 
         let marqueeBox = null, marqueeStartX = 0, marqueeStartY = 0;
         
@@ -799,17 +695,21 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    { x: 540, y: 300, contentModel: [{ text: "MapMent: Faça seus materiais para apresentação e mapas mentais.", style: {} }], id: 'block-0' },
-                    { x: 1140, y: 300, contentModel: [{ text: "É extremamente fácil fazê-los", style: {} }], id: 'block-1' }
+                    { x: 200, y: 300, width: '280px', contentModel: [{ text: "Bem-vindo ao MentMap! 👋\nDê um duplo clique aqui para editar o texto.", style: {} }], id: 'block-0' },
+                    { x: 600, y: 250, width: '280px', contentModel: [{ text: "Use a Roda do Mouse para dar zoom e segure SHIFT para mover o mapa.", style: {} }], id: 'block-1' },
+                    { x: 600, y: 450, width: '280px', contentModel: [{ text: "Clique com o botão direito para adicionar mais blocos, imagens ou links.", style: {} }], id: 'block-2' },
+                    { x: 1000, y: 350, width: '280px', contentModel: [{ text: "Para conectar ideias, ative o 'Modo Seta' ou segure CTRL e arraste de um bloco para outro.", style: {} }], id: 'block-3' }
                 ],
-                arrows: [],
-                viewport: { gridX: 0, gridY: 0, scale: 1 },
-                styles: { 
-                    gridBg: '#000000',
-                    gridLines: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)'
-                }
+                arrows: [
+                    { startBlock: 'block-0', endBlock: 'block-1', color: '#3498db', width: '3' },
+                    { startBlock: 'block-0', endBlock: 'block-2', color: '#3498db', width: '3' },
+                    { startBlock: 'block-1', endBlock: 'block-3', color: '#3498db', width: '3' },
+                    { startBlock: 'block-2', endBlock: 'block-3', color: '#3498db', width: '3' }
+                ],
+                viewport: { gridX: -100, gridY: -100, scale: 0.9 },
+                styles: {}
             };
-            blockCounter = 2;
+            blockCounter = 4;
             pages = [initialPage];
             currentPageIndex = 0;
             loadPage(0, true);
@@ -818,7 +718,7 @@
         }
         
         function populateFontSizeSelector() {
-            const fontSizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 30, 36, 48, 64, 72];
+            const fontSizes = [8, 9, 10, 11, 12, 14, 15, 16, 18, 20, 24, 30, 36, 48, 64, 72];
             const sizeSelect = document.getElementById('text-size');
             sizeSelect.innerHTML = '';
             fontSizes.forEach(size => {
@@ -829,13 +729,13 @@
             });
         }
 
-        // --- Main Event Listeners ---
+        // --- Listeners de Eventos Principais ---
         addContentBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
             contextMenuX = null;
             contextMenuY = null;
             const rect = addContentBtn.getBoundingClientRect();
-            contextMenu.style.left = `${rect.left - contextMenu.offsetWidth}px`;
+            contextMenu.style.left = `${rect.left - contextMenu.offsetWidth - 10}px`;
             contextMenu.style.top = `${rect.top}px`;
             contextMenu.style.display = 'block';
         });
@@ -843,7 +743,7 @@
         toggleSnapBtn.addEventListener('click', () => {
             isSnapEnabled = !isSnapEnabled;
             toggleSnapBtn.classList.toggle('active', isSnapEnabled);
-            showToast(`Grid Snap ${isSnapEnabled ? 'Enabled' : 'Disabled'}`);
+            showToast(`Encaixe na Grade ${isSnapEnabled ? 'Ativado' : 'Desativado'}`);
         });
         saveBtn.addEventListener('click', saveAllPages);
         loadBtn.addEventListener('click', () => fileLoader.click());
@@ -954,7 +854,7 @@
             block.className = 'block';
             block.style.left = `${config.x}px`;
             block.style.top = `${config.y}px`;
-            block.style.width = config.width || '200px';
+            block.style.width = config.width || '250px';
             if (config.height) { 
                 block.style.height = config.height;
             }
@@ -1204,7 +1104,7 @@
             
             const actionMap = {
                 'add-text': () => { 
-                    lastBlockCreationAction = () => addNewBlock('New text block.');
+                    lastBlockCreationAction = () => addNewBlock('Novo bloco de texto.');
                     lastBlockCreationAction();
                 },
                 'add-media-file': () => {
@@ -1225,7 +1125,7 @@
                                         const maxWidth = 800;
                                         const newWidth = Math.min(img.width, maxWidth);
                                         const newHeight = newWidth * aspectRatio;
-                                        const html = `<img src="${dataUrl}" alt="User content">`;
+                                        const html = `<img src="${dataUrl}" alt="Conteúdo do usuário">`;
                                         addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
                                     };
                                     img.src = dataUrl;
@@ -1261,7 +1161,7 @@
                 },
                 'add-media-link': () => {
                     const createMediaLinkBlock = () => {
-                        const url = prompt('Enter Image or Video URL (YouTube, Vimeo, etc.):');
+                        const url = prompt('Insira a URL da Imagem ou Vídeo (YouTube, Vimeo, etc.):');
                         if (!url) return;
 
                         let embedUrl;
@@ -1282,11 +1182,11 @@
                                 const maxWidth = 800;
                                 const newWidth = Math.min(img.width, maxWidth);
                                 const newHeight = newWidth * aspectRatio;
-                                const html = `<img src="${url}" alt="User content">`;
+                                const html = `<img src="${url}" alt="Conteúdo do usuário">`;
                                 addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
                             };
                             img.onerror = () => {
-                                showToast('Could not load image or video from the URL.');
+                                showToast('Não foi possível carregar a imagem ou vídeo da URL.');
                             };
                             img.src = url;
                         }
@@ -1296,18 +1196,18 @@
                 },
                 'add-pdf-link': () => {
                     const createPdfLinkBlock = () => {
-                        const url = prompt('Enter PDF URL to import as slides:');
+                        const url = prompt('Insira a URL do PDF para importar como slides:');
                         if (url) {
-                            showToast('Fetching PDF from URL...', 5000);
+                            showToast('Buscando PDF da URL...', 5000);
                             fetch(url)
                                 .then(response => {
-                                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                                    if (!response.ok) throw new Error(`Erro de HTTP! status: ${response.status}`);
                                     return response.arrayBuffer();
                                 })
                                 .then(arrayBuffer => processPdfData(arrayBuffer, url))
                                 .catch(e => {
-                                    console.error("Error fetching PDF from URL:", e);
-                                    showToast('Failed to fetch or process PDF. Check CORS policy or URL.');
+                                    console.error("Erro ao buscar PDF da URL:", e);
+                                    showToast('Falha ao buscar ou processar o PDF. Verifique a política de CORS ou a URL.');
                                 });
                         }
                     };
@@ -1316,20 +1216,20 @@
                 },
                 'add-desmos-link': () => {
                     const createDesmosBlock = () => {
-                        const desmosUrl = prompt('Enter the Desmos graph URL:');
+                        const desmosUrl = prompt('Insira a URL do gráfico Desmos:');
                         if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) addNewBlock(`<iframe src="${desmosUrl}"></iframe>`, { width: '600px', height: '400px' });
-                        else if (desmosUrl) showToast('Invalid Desmos URL.');
+                        else if (desmosUrl) showToast('URL do Desmos inválida.');
                     };
                     lastBlockCreationAction = createDesmosBlock;
                     lastBlockCreationAction();
                 },
                 'add-geogebra-link': () => {
                     const createGeoGebraBlock = () => {
-                        const geoGebraUrl = prompt('Enter the GeoGebra applet URL (e.g., from share > embed):');
+                        const geoGebraUrl = prompt('Insira a URL do applet GeoGebra (ex: de compartilhar > incorporar):');
                         if (geoGebraUrl && geoGebraUrl.includes('geogebra.org')) {
                             addNewBlock(`<iframe src="${geoGebraUrl}" style="border:0px;width:100%;height:100%;" allowfullscreen></iframe>`, { width: '600px', height: '450px' });
                         } else if (geoGebraUrl) {
-                            showToast('Invalid GeoGebra URL.');
+                            showToast('URL do GeoGebra inválida.');
                         }
                     };
                     lastBlockCreationAction = createGeoGebraBlock;
@@ -1833,7 +1733,7 @@
 
         function updateCoordinates(e = null) {
             if (selection.length > 1) {
-                coordsDisplay.innerHTML = `${selection.length} items selected | Z: ${Math.round(scale * 100)}%`;
+                coordsDisplay.innerHTML = `${selection.length} itens selecionados | Z: ${Math.round(scale * 100)}%`;
             } else if (selection.length === 1) {
                 const item = selection[0];
                 if (item.classList.contains('block')) {
@@ -1841,13 +1741,13 @@
                     const y = parseInt(item.style.top);
                     coordsDisplay.innerHTML = `X: ${x}, Y: ${y} | Z: ${Math.round(scale * 100)}%`;
                 } else if (item.classList.contains('arrow-group')) {
-                    coordsDisplay.innerHTML = `Arrow selected | Z: ${Math.round(scale * 100)}%`;
+                    coordsDisplay.innerHTML = `Seta selecionada | Z: ${Math.round(scale * 100)}%`;
                 }
             } else if (e) {
                 const mouseCoords = screenToGridCoords(e.clientX, e.clientY);
                 coordsDisplay.innerHTML = `X: ${Math.round(mouseCoords.x)}, Y: ${Math.round(mouseCoords.y)} | Z: ${Math.round(scale * 100)}%`;
             } else {
-                coordsDisplay.innerHTML = `Nothing selected | Z: ${Math.round(scale * 100)}%`;
+                coordsDisplay.innerHTML = `Nada selecionado | Z: ${Math.round(scale * 100)}%`;
             }
         }
         
@@ -1944,7 +1844,7 @@
                     if (isEditing) updateTextControlsOnSelectionChange();
                     else { 
                         const styles = getStyleOfFirstCharacter(lastSelectedBlock.contentModel);
-                        document.querySelector('[data-color-target="text"]').style.background = styles.color || '#333';
+                        document.querySelector('[data-color-target="text"]').style.background = styles.color || '#f9fafb';
                     }
                 }
             }
@@ -1952,15 +1852,18 @@
                 const arrowToSample = lastSelectedItem?.classList.contains('arrow-group') ? lastSelectedItem : selection.find(i => i.classList.contains('arrow-group'));
                 if (arrowToSample) {
                     const arrowLine = arrowToSample.querySelector('.arrow-line');
-                    const color = arrowLine.getAttribute('stroke') || '#000000';
+                    const color = arrowLine.getAttribute('stroke') || '#f9fafb';
                     document.querySelector('[data-color-target="arrow"]').style.background = color;
                     nonColorInputs.arrowWidth.value = arrowLine.getAttribute('stroke-width');
                 }
             }
+            
+            const bodyStyle = getComputedStyle(document.body);
+            const gridStyle = getComputedStyle(grid);
 
-            document.querySelector('[data-color-target="gridBg"]').style.background = document.body.style.background;
-            document.querySelector('[data-color-target="gridLines"]').style.background = 'rgba(255,255,255,0.2)';
-
+            document.querySelector('[data-color-target="gridBg"]').style.background = bodyStyle.backgroundImage;
+            const gridLineColorMatch = gridStyle.backgroundImage.match(/rgba?\((\d+,\s*\d+,\s*\d+,\s*[\d.]+)\)/);
+            document.querySelector('[data-color-target="gridLines"]').style.background = gridLineColorMatch ? `rgb(${gridLineColorMatch[1]})` : 'rgba(255,255,255,0.1)';
         }
 
         nonColorInputs.boldBtn.addEventListener('mousedown', e => { e.preventDefault(); applyStyleToSelection({ fontWeight: 'bold' }); });
@@ -1996,7 +1899,6 @@
 
             const selection = window.getSelection();
             if (selection.rangeCount === 0 || selection.isCollapsed) {
-                const range = selection.getRangeAt(0);
                 const { index } = getSelectionIndices(activeEditingElement);
                 const styles = getStyleAtCharacterIndex(index > 0 ? index - 1 : 0);
                 updateToolbarUI(styles);
@@ -2013,7 +1915,7 @@
             nonColorInputs.italicBtn.classList.toggle('active', styles.fontStyle === 'italic');
             nonColorInputs.underlineBtn.classList.toggle('active', styles.textDecoration === 'underline');
 
-            const currentSize = Math.round(parseFloat(styles.fontSize)) || 16;
+            const currentSize = Math.round(parseFloat(styles.fontSize)) || 15;
             let closestOption = nonColorInputs.textSize.options[0];
             for (const option of nonColorInputs.textSize.options) {
                 if (Math.abs(option.value - currentSize) <= Math.abs(closestOption.value - currentSize)) {
@@ -2025,7 +1927,7 @@
             const fontOption = Array.from(nonColorInputs.textFont.options).find(opt => (styles.fontFamily || "").includes(opt.value));
             nonColorInputs.textFont.value = fontOption ? fontOption.value : nonColorInputs.textFont.options[0].value;
             
-            document.querySelector('[data-color-target="text"]').style.background = styles.color || '#333333';
+            document.querySelector('[data-color-target="text"]').style.background = styles.color || '#f9fafb';
         }
 
         let colorPicker = null;
@@ -2041,6 +1943,7 @@
 
                     colorPicker.show(initialColor, (newColor) => {
                         handleColorConfirm(targetType, newColor);
+                        recordState();
                     });
                     
                     const rect = wrapper.getBoundingClientRect();
@@ -2057,7 +1960,7 @@
                 'text': () => applyStyleToSelection({ color: color }),
                 'arrow': () => selection.forEach(item => { if (item.classList.contains('arrow-group')) { item.querySelector('.arrow-line').setAttribute('stroke', color); updateSingleArrow(item); }}),
                 'gridBg': () => document.body.style.background = color,
-                'gridLines': () => grid.style.backgroundImage = `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`
+                'gridLines': () => grid.style.backgroundImage = `radial-gradient(${color} 1px, transparent 1px)`
             };
 
             if (actions[targetType]) {
@@ -2072,7 +1975,7 @@
 
             if (isEditing && activeEditingElement) {
                 targetType = 'text';
-                initialColor = getCommonStyleInSelection()?.color || '#333333';
+                initialColor = getCommonStyleInSelection()?.color || '#f9fafb';
             } else if (lastSelectedItem?.classList.contains('block')) {
                 targetType = 'blockBg';
                 initialColor = getComputedStyle(lastSelectedItem).backgroundColor;
@@ -2083,6 +1986,7 @@
             
             colorPicker.show(initialColor, (newColor) => {
                 handleColorConfirm(targetType, newColor);
+                recordState();
             });
             colorPicker.setPosition(lastMouseX, lastMouseY);
         }
@@ -2185,8 +2089,8 @@
             scale = state.viewport?.scale || 1;
             updateGridTransform();
 
-            document.body.style.background = state.styles?.gridBg || '#000000';
-            grid.style.backgroundImage = state.styles?.gridLines || `linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)`;
+            document.body.style.background = state.styles?.gridBg || 'linear-gradient(90deg, var(--background-start), var(--background-end), var(--background-start))';
+            grid.style.backgroundImage = state.styles?.gridLines || `radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)`;
             
             let maxId = 0;
             if (state.blocks && Array.isArray(state.blocks)) {
@@ -2216,7 +2120,7 @@
         }
         
         function updatePageUI() {
-            pageDisplay.textContent = `Page ${currentPageIndex + 1} / ${pages.length}`;
+            pageDisplay.textContent = `Slide ${currentPageIndex + 1} / ${pages.length}`;
             prevPageBtn.disabled = currentPageIndex === 0;
             nextPageBtn.disabled = currentPageIndex >= pages.length - 1;
             deletePageBtn.disabled = pages.length <= 1;
@@ -2236,18 +2140,18 @@
             pages.push(newPage);
             loadPage(pages.length - 1);
             recordState();
-            showToast(`Page ${pages.length} added`);
+            showToast(`Slide ${pages.length} adicionado`);
         }
 
         function deleteCurrentPage() {
             if (pages.length <= 1) {
-                showToast("Cannot delete the last page.");
+                showToast("Não é possível deletar o último slide.");
                 return;
             }
             const pageHasContent = pages[currentPageIndex] && pages[currentPageIndex].blocks.length > 0;
             let confirmed = true;
             if (pageHasContent) {
-                confirmed = window.confirm("This slide has content. Are you sure you want to delete it?");
+                confirmed = window.confirm("Este slide tem conteúdo. Tem certeza que deseja deletá-lo?");
             }
 
             if (confirmed) {
@@ -2256,7 +2160,7 @@
                 const newIndex = Math.min(currentPageIndex, pages.length - 1);
                 loadPage(newIndex, true); 
                 recordState();
-                showToast(`Page ${deletedPageIndex} deleted`);
+                showToast(`Slide ${deletedPageIndex} deletado`);
             }
         }
         
@@ -2276,7 +2180,7 @@
         }
 
         async function processPdfData(pdfData, sourceName) {
-            showToast(`Importing ${sourceName}... This may take a moment.`, 10000);
+            showToast(`Importando ${sourceName}... Isso pode levar um momento.`, 10000);
             try {
                 const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
 
@@ -2312,7 +2216,7 @@
                     const blockX = Math.max(0, gridCenter.x - blockWidth / 2);
                     const blockY = Math.max(0, gridCenter.y - blockHeight / 2);
                     
-                    const imageHtml = `<img src="${imageDataUrl}" style="width:100%; height:100%;" alt="PDF Page ${i}">`;
+                    const imageHtml = `<img src="${imageDataUrl}" style="width:100%; height:100%;" alt="Página de PDF ${i}">`;
                     
                     const newPage = {
                         blocks: [{
@@ -2335,10 +2239,10 @@
 
                 loadPage(importStartIndex, true);
                 recordState();
-                showToast(`Successfully imported ${pdf.numPages} slides.`, 3000);
+                showToast(`Importado com sucesso ${pdf.numPages} slides.`, 3000);
             } catch (error) {
-                console.error('Error importing PDF:', error);
-                showToast('Failed to import PDF. See console for details.', 3000);
+                console.error('Erro ao importar PDF:', error);
+                showToast('Falha ao importar PDF. Veja o console para detalhes.', 3000);
             }
         }
 
@@ -2348,7 +2252,7 @@
                 formatVersion: "3.0",
                 pages: pages
             };
-            download('mapment-presentation.json', JSON.stringify(state, null, 2));
+            download('mentmap-apresentacao.json', JSON.stringify(state, null, 2));
         }
 
         function loadAllPages(event) {
@@ -2361,15 +2265,17 @@
                     if (loadedData.pages && Array.isArray(loadedData.pages)) {
                         pages = loadedData.pages;
                     } else {
+                        // For backwards compatibility with older formats
                         pages = [loadedData];
                     }
                     loadPage(0, true);
                     history = [];
                     historyIndex = -1;
                     recordState();
+                    showToast('Arquivo carregado com sucesso!');
                 } catch (err) {
-                    console.error('Error parsing JSON:', err);
-                    showToast('Failed to load file. It may be corrupted.');
+                    console.error('Erro ao analisar JSON:', err);
+                    showToast('Falha ao carregar arquivo. Pode estar corrompido.');
                 }
             };
             reader.readAsText(file);
@@ -2605,7 +2511,7 @@
                 if (max === min) h = 0; else { switch (max) { case r: h = (g - b) / d + (g < b ? 6 : 0); break; case g: h = (b - r) / d + 2; break; case b: h = (r - g) / d + 4; break; } h /= 6; }
                 return { h: h * 360, s: s, v: v };
             }
-            function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
+            function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase(); }
             function hexToRgb(hex) {
                 let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
                 return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r:0,g:0,b:0};
@@ -2636,7 +2542,7 @@
             };
         }
 
-        // --- NEW TEXT EDITING ENGINE ---
+        // --- Mecanismo de Edição de Texto ---
 
         function renderContent(model, element) {
             element.innerHTML = '';
@@ -2653,7 +2559,6 @@
                 spanEl.textContent = span.text;
                 
                 Object.entries(span.style).forEach(([key, value]) => {
-                    const cssKey = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
                     if (value) {
                          spanEl.style[key] = value;
                     }
@@ -2740,7 +2645,7 @@
                     selection.addRange(range);
                 }
             } catch (e) {
-                console.error("Failed to restore selection.", e);
+                console.error("Falha ao restaurar a seleção.", e);
             }
         }
 
@@ -2778,7 +2683,7 @@
                             } else {
                                 newStyle[key] = styleToApply[key]; 
                             }
-                             if (key === 'fontSize' && styleToApply[key] === '16px') {
+                             if (key === 'fontSize' && styleToApply[key] === '15px') {
                                 delete newStyle[key];
                             }
                         }
