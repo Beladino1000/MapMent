@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<!-- O atributo lang será definido dinamicamente -->
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas Interativo - MentMap</title>
+    <!-- O título será definido dinamicamente -->
+    <title>Interactive Canvas - MentMap</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -157,12 +159,23 @@
             user-select: text;
             -webkit-user-select: text;
         }
+        
+        /* Correção para redimensionamento de iframe */
+        .block-content.has-iframe {
+            padding: 0;
+            overflow: hidden; /* Garante que o iframe não ultrapasse a borda arredondada */
+            height: 100%;
+        }
+        
+        .block-content.has-iframe iframe {
+             border-radius: 0 !important; /* Remove o radius do iframe para que o do pai funcione */
+        }
 
         .block-content iframe,
         .block-content img,
         .block-content video {
             width: 100%;
-            height: auto;
+            height: 100%; /* Alterado de 'auto' para 100% para iframes */
             display: block;
             border: none;
             border-radius: 8px;
@@ -515,59 +528,59 @@
         </div>
     </div>
 
-    <div class="coordinates" id="coordinates">Nada selecionado</div>
+    <div class="coordinates" id="coordinates" data-translate-key="coords_nothing">Nada selecionado</div>
 
     <div class="shortcut-hint" id="shortcut-hint" style="display: none;">
-        <div class="hint-line">Pressione <kbd>H</kbd> para mostrar/esconder os atalhos</div><hr>
-        <div class="hint-category">Navegação e Visualização:</div>
-        <div class="hint-line">Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa</div>
-        <div class="hint-line">Use o <kbd>Scroll</kbd> para dar zoom</div>
-        <div class="hint-line"><kbd>←</kbd> / <kbd>→</kbd> para mudar de slide</div>
-        <div class="hint-line"><kbd>G</kbd> Esconder/Mostrar Painel Lateral</div>
-        <div class="hint-line"><kbd>N</kbd> Esconder/Mostrar Coordenadas</div>
+        <div class="hint-line"><span data-translate-key="hint_toggle">Pressione <kbd>H</kbd> para mostrar/esconder os atalhos</span></div><hr>
+        <div class="hint-category" data-translate-key="hint_nav_title">Navegação e Visualização:</div>
+        <div class="hint-line"><span data-translate-key="hint_pan">Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa</span></div>
+        <div class="hint-line"><span data-translate-key="hint_zoom">Use o <kbd>Scroll</kbd> para dar zoom</span></div>
+        <div class="hint-line"><span data-translate-key="hint_slides">Use <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide</span></div>
+        <div class="hint-line"><span data-translate-key="hint_sidebar">Use <kbd>G</kbd> Esconder/Mostrar Painel Lateral</span></div>
+        <div class="hint-line"><span data-translate-key="hint_coords"><kbd>N</kbd> Esconder/Mostrar Coordenadas</span></div>
         <hr>
-        <div class="hint-category">Ações e Atalhos:</div>
-        <div class="hint-line"><kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo</div>
-        <div class="hint-line"><kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar</div>
-        <div class="hint-line"><kbd>Shift</kbd> + <kbd>+</kbd> Adicionar Slide</div>
-        <div class="hint-line"><kbd>Shift</kbd> + <kbd>-</kbd> Deletar Slide</div>
-        <div class="hint-line"><kbd>B</kbd> Paleta de Cores Inteligente</div>
-        <div class="hint-line"><kbd>Delete</kbd> Apagar itens</div>
-        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>Z</kbd> Desfazer</div>
-        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Refazer</div>
-        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar</div>
-        <div class="hint-line"><kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar</div>
+        <div class="hint-category" data-translate-key="hint_actions_title">Ações e Atalhos:</div>
+        <div class="hint-line"><span data-translate-key="hint_add"><kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo</span></div>
+        <div class="hint-line"><span data-translate-key="hint_duplicate"><kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar</span></div>
+        <div class="hint-line"><span data-translate-key="hint_add_slide"><kbd>Shift</kbd> + <kbd>+</kbd> Adicionar Slide</span></div>
+        <div class="hint-line"><span data-translate-key="hint_delete_slide"><kbd>Shift</kbd> + <kbd>-</kbd> Deletar Slide</span></div>
+        <div class="hint-line"><span data-translate-key="hint_smart_color"><kbd>B</kbd> Paleta de Cores Inteligente</span></div>
+        <div class="hint-line"><span data-translate-key="hint_delete"><kbd>Delete</kbd> Apagar itens</span></div>
+        <div class="hint-line"><span data-translate-key="hint_undo"><kbd>Ctrl</kbd> + <kbd>Z</kbd> Desfazer</span></div>
+        <div class="hint-line"><span data-translate-key="hint_redo"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Refazer</span></div>
+        <div class="hint-line"><span data-translate-key="hint_save"><kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar</span></div>
+        <div class="hint-line"><span data-translate-key="hint_load"><kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar</span></div>
     </div>
 
     <div class="sidebar">
         <div class="sidebar-section">
-            <h4>Customizar</h4>
+            <h4 data-translate-key="sidebar_customize">Customizar</h4>
             <div id="customize-content">
-                <div id="block-controls" class="control-group hidden"><h5>Bloco</h5><label><span>Fundo</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label><label><span>Borda</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label></div>
-                <div id="handle-controls" class="control-group hidden"><h5>Alças</h5><label><span>Cor</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span>Visível</span><input type="checkbox" id="handle-visible" checked></label></div>
+                <div id="block-controls" class="control-group hidden"><h5 data-translate-key="sidebar_block">Bloco</h5><label><span data-translate-key="sidebar_background">Fundo</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label><label><span data-translate-key="sidebar_border">Borda</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label></div>
+                <div id="handle-controls" class="control-group hidden"><h5 data-translate-key="sidebar_handles">Alças</h5><label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span data-translate-key="sidebar_visible">Visível</span><input type="checkbox" id="handle-visible" checked></label></div>
                 <div id="text-controls" class="control-group hidden">
-                    <h5>Texto</h5>
+                    <h5 data-translate-key="sidebar_text">Texto</h5>
                     <div class="text-format-buttons">
                         <button id="bold-btn" class="format-btn"><b>B</b></button>
                         <button id="italic-btn" class="format-btn"><i>I</i></button>
                         <button id="underline-btn" class="format-btn"><u>U</u></button>
                     </div>
-                    <label><span>Cor</span><div class="color-picker-wrapper" data-color-target="text"></div></label><label><span>Tamanho (px)</span><select id="text-size"></select></label><label><span>Fonte</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Padrão</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
+                    <label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="text"></div></label><label><span data-translate-key="sidebar_size">Tamanho (px)</span><select id="text-size"></select></label><label><span data-translate-key="sidebar_font">Fonte</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" data-translate-key="font_default">Padrão</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
                 </div>
                 <div id="link-controls" class="control-group hidden">
-                    <h5>Link Incorporado</h5>
+                    <h5 data-translate-key="sidebar_embed">Link Incorporado</h5>
                     <label><span>URL</span><input type="text" id="link-src"></label>
                 </div>
                 <div id="arrow-controls" class="control-group hidden">
-                    <h5>Seta</h5>
-                    <label><span>Cor</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label>
-                    <label><span>Tamanho</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
+                    <h5 data-translate-key="sidebar_arrow">Seta</h5>
+                    <label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="arrow"></div></label>
+                    <label><span data-translate-key="sidebar_size">Tamanho</span><input type="range" id="arrow-width" min="1" max="10" step="1"></label>
                 </div>
-                <div id="grid-controls" class="control-group"><h5>Grade</h5><label><span>Fundo</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span>Linhas</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
+                <div id="grid-controls" class="control-group"><h5 data-translate-key="sidebar_grid">Grade</h5><label><span data-translate-key="sidebar_background">Fundo</span><div class="color-picker-wrapper" data-color-target="gridBg"></div></label><label><span data-translate-key="sidebar_lines">Linhas</span><div class="color-picker-wrapper" data-color-target="gridLines"></div></label></div>
             </div>
         </div>
         <div class="sidebar-section">
-            <h4>Slides</h4>
+            <h4 data-translate-key="sidebar_slides">Slides</h4>
             <div class="page-controls">
                 <button class="page-btn" id="prev-page-btn" title="Slide Anterior (←)">▲</button>
                 <span id="page-display">Slide 1 / 1</span>
@@ -577,33 +590,33 @@
             </div>
         </div>
         <div class="sidebar-section">
-            <h4>Ações</h4>
+            <h4 data-translate-key="sidebar_actions">Ações</h4>
             <div class="actions-grid">
-                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span>Adicionar</span></button>
-                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span>Modo Seta</span></button>
-                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span>Salvar</span></button>
-                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span>Carregar</span></button>
-                <button class="control-btn active" id="toggle-snap-btn"><span class="btn-icon">🧲</span><span>Encaixe</span></button>
+                <button class="control-btn" id="add-content-btn"><span class="btn-icon">+</span><span data-translate-key="btn_add_content">Adicionar</span></button>
+                <button class="control-btn" id="toggle-arrow-mode-btn"><span class="btn-icon">→</span><span data-translate-key="btn_arrow_mode">Modo Seta</span></button>
+                <button class="control-btn" id="save-btn"><span class="btn-icon">💾</span><span data-translate-key="btn_save">Salvar</span></button>
+                <button class="control-btn" id="load-btn"><span class="btn-icon">📂</span><span data-translate-key="btn_load">Carregar</span></button>
+                <button class="control-btn active" id="toggle-snap-btn"><span class="btn-icon">🧲</span><span data-translate-key="btn_snap">Encaixe</span></button>
             </div>
         </div>
     </div>
 
     <div id="context-menu">
         <ul>
-            <li class="menu-header">Adicionar</li>
-            <li data-action="add-text">Bloco de Texto</li>
+            <li class="menu-header" data-translate-key="menu_add">Adicionar</li>
+            <li data-action="add-text" data-translate-key="menu_add_text">Bloco de Texto</li>
             <li class="has-submenu">
-                Do Arquivo >
+                <span data-translate-key="menu_from_file">Do Arquivo ></span>
                 <ul class="submenu">
-                    <li data-action="add-media-file">Imagem / Vídeo</li>
-                    <li data-action="import-pdf-file">PDF como Slides</li>
+                    <li data-action="add-media-file" data-translate-key="menu_add_media">Imagem / Vídeo</li>
+                    <li data-action="import-pdf-file" data-translate-key="menu_add_pdf">PDF como Slides</li>
                 </ul>
             </li>
             <li class="has-submenu">
-                Do Link >
+                <span data-translate-key="menu_from_link">Do Link ></span>
                 <ul class="submenu">
-                    <li data-action="add-media-link">Imagem / Vídeo</li>
-                    <li data-action="add-pdf-link">PDF como Slides</li>
+                    <li data-action="add-media-link" data-translate-key="menu_add_media">Imagem / Vídeo</li>
+                    <li data-action="add-pdf-link" data-translate-key="menu_add_pdf">PDF como Slides</li>
                     <li data-action="add-desmos-link">Desmos</li>
                     <li data-action="add-geogebra-link">GeoGebra</li>
                 </ul>
@@ -614,7 +627,7 @@
     <input type="file" id="file-loader" accept=".json" style="display: none;">
 
     <div id="custom-color-picker" class="hidden">
-        <div class="color-picker-header">Seletor de Cores</div>
+        <div class="color-picker-header" data-translate-key="color_picker_title">Seletor de Cores</div>
         <div class="color-picker-body">
             <div class="color-spectrum" id="color-spectrum">
                 <div class="spectrum-cursor" id="spectrum-cursor"></div>
@@ -634,8 +647,8 @@
             </div>
         </div>
         <div class="color-picker-footer">
-            <button id="color-picker-cancel">Cancelar</button>
-            <button id="color-picker-confirm" class="confirm-btn">Confirmar</button>
+            <button id="color-picker-cancel" data-translate-key="btn_cancel">Cancelar</button>
+            <button id="color-picker-confirm" class="confirm-btn" data-translate-key="btn_confirm">Confirmar</button>
         </div>
     </div>
 
@@ -646,6 +659,347 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js`;
 
     document.addEventListener('DOMContentLoaded', function() {
+
+        // --- Sistema de Internacionalização (i18n) ---
+        const translations = {
+            'pt': {
+                page_title: "Canvas Interativo - MentMap",
+                coords_nothing: "Nada selecionado",
+                coords_items: "itens selecionados",
+                coords_arrow: "Seta selecionada",
+                hint_toggle: "Pressione <kbd>H</kbd> para mostrar/esconder os atalhos",
+                hint_nav_title: "Navegação e Visualização:",
+                hint_pan: "Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa",
+                hint_zoom: "Use o <kbd>Scroll</kbd> para dar zoom",
+                hint_slides: "Use <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide",
+                hint_sidebar: "Use <kbd>G</kbd> para Esconder/Mostrar Painel Lateral",
+                hint_coords: "<kbd>N</kbd> para Esconder/Mostrar Coordenadas",
+                hint_actions_title: "Ações e Atalhos:",
+                hint_add: "<kbd>Shift</kbd> + <kbd>A</kbd> para Adicionar conteúdo",
+                hint_duplicate: "<kbd>Shift</kbd> + <kbd>D</kbd> para Duplicar/Adicionar",
+                hint_add_slide: "<kbd>Shift</kbd> + <kbd>+</kbd> para Adicionar Slide",
+                hint_delete_slide: "<kbd>Shift</kbd> + <kbd>-</kbd> para Deletar Slide",
+                hint_smart_color: "<kbd>B</kbd> para Paleta de Cores Inteligente",
+                hint_delete: "<kbd>Delete</kbd> para Apagar itens",
+                hint_undo: "<kbd>Ctrl</kbd> + <kbd>Z</kbd> para Desfazer",
+                hint_redo: "<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> para Refazer",
+                hint_save: "<kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar",
+                hint_load: "<kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar",
+                sidebar_customize: "Customizar",
+                sidebar_block: "Bloco",
+                sidebar_background: "Fundo",
+                sidebar_border: "Borda",
+                sidebar_handles: "Alças",
+                sidebar_color: "Cor",
+                sidebar_visible: "Visível",
+                sidebar_text: "Texto",
+                sidebar_size: "Tamanho (px)",
+                sidebar_font: "Fonte",
+                font_default: "Padrão",
+                sidebar_embed: "Link Incorporado",
+                sidebar_arrow: "Seta",
+                sidebar_grid: "Grade",
+                sidebar_lines: "Linhas",
+                sidebar_slides: "Slides",
+                sidebar_actions: "Ações",
+                btn_add_content: "Adicionar",
+                btn_arrow_mode: "Modo Seta",
+                btn_save: "Salvar",
+                btn_load: "Carregar",
+                btn_snap: "Encaixe",
+                menu_add: "Adicionar",
+                menu_add_text: "Bloco de Texto",
+                menu_from_file: "Do Arquivo >",
+                menu_add_media: "Imagem / Vídeo",
+                menu_add_pdf: "PDF como Slides",
+                menu_from_link: "Do Link >",
+                color_picker_title: "Seletor de Cores",
+                btn_cancel: "Cancelar",
+                btn_confirm: "Confirmar",
+                toast_snap_on: "Encaixe na Grade Ativado",
+                toast_snap_off: "Encaixe na Grade Desativado",
+                toast_page_added: "Slide {page} adicionado",
+                toast_page_deleted: "Slide {page} deletado",
+                toast_cant_delete_last: "Não é possível deletar o último slide.",
+                toast_pdf_importing: "Importando {name}... Isso pode levar um momento.",
+                toast_pdf_success: "Importado com sucesso {numPages} slides.",
+                toast_pdf_error: "Falha ao importar PDF. Veja o console para detalhes.",
+                toast_file_loaded: "Arquivo carregado com sucesso!",
+                toast_file_error: "Falha ao carregar arquivo. Pode estar corrompido.",
+                toast_media_error: "Não foi possível carregar a imagem ou vídeo da URL.",
+                prompt_media_url: "Insira a URL da Imagem ou Vídeo (YouTube, Vimeo, etc.):",
+                prompt_pdf_url: "Insira a URL do PDF para importar como slides:",
+                prompt_desmos_url: "Insira a URL do gráfico Desmos:",
+                prompt_geogebra_url: "Insira a URL do applet GeoGebra (ex: de compartilhar > incorporar):",
+                initial_block_0: "Bem-vindo ao MentMap! 👋\nEste é o seu canvas infinito. Dê um duplo clique para editar.",
+                initial_block_1: "NAVEGAÇÃO\nUse a Roda do Mouse para dar zoom. Segure SHIFT e arraste para mover o mapa.",
+                initial_block_2: "ADICIONAR CONTEÚDO\nClique com o botão direito para adicionar blocos, imagens, vídeos e links incorporados (PDFs, Desmos).",
+                initial_block_3: "CONECTAR IDEIAS\nAtive o 'Modo Seta' ou segure CTRL e arraste de um bloco para outro para criar uma conexão.",
+                initial_block_4: "CUSTOMIZAÇÃO\nAbra o painel com 'G'. Selecione um item para ver suas opções. Dica: Pressione 'B' para uma paleta de cores inteligente!",
+                initial_block_5: "EDIÇÃO RÁPIDA\nDuplique com Shift+D, apague com Delete, e desfaça/refaça com Ctrl+Z.",
+                initial_block_6: "APRESENTAÇÕES E ARQUIVOS\nUse os controles de 'Slides' para criar uma apresentação. Salve (Ctrl+S) e Carregue (Ctrl+L) seu trabalho.",
+            },
+            'en': {
+                page_title: "Interactive Canvas - MentMap",
+                coords_nothing: "Nothing selected",
+                coords_items: "items selected",
+                coords_arrow: "Arrow selected",
+                hint_toggle: "Press <kbd>H</kbd> to toggle shortcuts hint",
+                hint_nav_title: "Navigation & View:",
+                hint_pan: "Hold <kbd>Shift</kbd> or <kbd>Middle Click</kbd> to pan the map",
+                hint_zoom: "Use <kbd>Scroll</kbd> to zoom",
+                hint_slides: "Use <kbd>←</kbd> / <kbd>→</kbd> to change slides",
+                hint_sidebar: "Use <kbd>G</kbd> to Hide/Show Side Panel",
+                hint_coords: "<kbd>N</kbd> to Hide/Show Coordinates",
+                hint_actions_title: "Actions & Shortcuts:",
+                hint_add: "<kbd>Shift</kbd> + <kbd>A</kbd> to Add content",
+                hint_duplicate: "<kbd>Shift</kbd> + <kbd>D</kbd> to Duplicate/Add",
+                hint_add_slide: "<kbd>Shift</kbd> + <kbd>+</kbd> to Add Slide",
+                hint_delete_slide: "<kbd>Shift</kbd> + <kbd>-</kbd> to Delete Slide",
+                hint_smart_color: "<kbd>B</kbd> for Smart Color Palette",
+                hint_delete: "<kbd>Delete</kbd> to delete items",
+                hint_undo: "<kbd>Ctrl</kbd> + <kbd>Z</kbd> to Undo",
+                hint_redo: "<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> to Redo",
+                hint_save: "<kbd>Ctrl</kbd> + <kbd>S</kbd> to save",
+                hint_load: "<kbd>Ctrl</kbd> + <kbd>L</kbd> to load",
+                sidebar_customize: "Customize",
+                sidebar_block: "Block",
+                sidebar_background: "Background",
+                sidebar_border: "Border",
+                sidebar_handles: "Handles",
+                sidebar_color: "Color",
+                sidebar_visible: "Visible",
+                sidebar_text: "Text",
+                sidebar_size: "Size (px)",
+                sidebar_font: "Font",
+                font_default: "Default",
+                sidebar_embed: "Embed Link",
+                sidebar_arrow: "Arrow",
+                sidebar_grid: "Grid",
+                sidebar_lines: "Lines",
+                sidebar_slides: "Slides",
+                sidebar_actions: "Actions",
+                btn_add_content: "Add Content",
+                btn_arrow_mode: "Arrow Mode",
+                btn_save: "Save",
+                btn_load: "Load",
+                btn_snap: "Snap",
+                menu_add: "Add",
+                menu_add_text: "Text Block",
+                menu_from_file: "From File >",
+                menu_add_media: "Image / Video",
+                menu_add_pdf: "PDF as Slides",
+                menu_from_link: "From Link >",
+                color_picker_title: "Color Picker",
+                btn_cancel: "Cancel",
+                btn_confirm: "Confirm",
+                toast_snap_on: "Grid Snap Enabled",
+                toast_snap_off: "Grid Snap Disabled",
+                toast_page_added: "Slide {page} added",
+                toast_page_deleted: "Slide {page} deleted",
+                toast_cant_delete_last: "Cannot delete the last slide.",
+                toast_pdf_importing: "Importing {name}... This may take a moment.",
+                toast_pdf_success: "Successfully imported {numPages} slides.",
+                toast_pdf_error: "Failed to import PDF. See console for details.",
+                toast_file_loaded: "File loaded successfully!",
+                toast_file_error: "Failed to load file. It may be corrupted.",
+                toast_media_error: "Could not load image or video from the URL.",
+                prompt_media_url: "Enter Image or Video URL (YouTube, Vimeo, etc.):",
+                prompt_pdf_url: "Enter PDF URL to import as slides:",
+                prompt_desmos_url: "Enter the Desmos graph URL:",
+                prompt_geogebra_url: "Enter the GeoGebra applet URL (e.g., from share > embed):",
+                initial_block_0: "Welcome to MentMap! 👋\nThis is your infinite canvas. Double-click to edit.",
+                initial_block_1: "NAVIGATION\nUse the Mouse Wheel to zoom. Hold SHIFT and drag to pan the map.",
+                initial_block_2: "ADD CONTENT\nRight-click to add blocks, images, videos, and embedded links (PDFs, Desmos).",
+                initial_block_3: "CONNECT IDEAS\nEnable 'Arrow Mode' or hold CTRL and drag from one block to another to create a connection.",
+                initial_block_4: "CUSTOMIZATION\nOpen the panel with 'G'. Select an item to see its options. Tip: Press 'B' for a smart color palette!",
+                initial_block_5: "QUICK EDITING\nDuplicate with Shift+D, delete with Delete, and undo/redo with Ctrl+Z.",
+                initial_block_6: "PRESENTATIONS & FILES\nUse the 'Slides' controls to create a presentation. Save (Ctrl+S) and Load (Ctrl+L) your work.",
+            },
+            'ja': {
+                page_title: "インタラクティブキャンバス - MentMap",
+                coords_nothing: "何も選択されていません",
+                coords_items: "個のアイテムを選択中",
+                coords_arrow: "矢印を選択中",
+                hint_toggle: "<kbd>H</kbd>キーでショートカットのヒントを切り替え",
+                hint_nav_title: "ナビゲーションと表示:",
+                hint_pan: "<kbd>Shift</kbd>キーまたは<kbd>中央クリック</kbd>でマップをパン",
+                hint_zoom: "<kbd>スクロール</kbd>でズーム",
+                hint_slides: "<kbd>←</kbd> / <kbd>→</kbd>でスライドを切り替え",
+                hint_sidebar: "<kbd>G</kbd>キーでサイドパネルの表示/非表示",
+                hint_coords: "<kbd>N</kbd>キーで座標の表示/非表示",
+                hint_actions_title: "アクションとショートカット:",
+                hint_add: "<kbd>Shift</kbd> + <kbd>A</kbd>でコンテンツを追加",
+                hint_duplicate: "<kbd>Shift</kbd> + <kbd>D</kbd>で複製/追加",
+                hint_add_slide: "<kbd>Shift</kbd> + <kbd>+</kbd>でスライドを追加",
+                hint_delete_slide: "<kbd>Shift</kbd> + <kbd>-</kbd>でスライドを削除",
+                hint_smart_color: "<kbd>B</kbd>キーでスマートカラーパレット",
+                hint_delete: "<kbd>Delete</kbd>キーでアイテムを削除",
+                hint_undo: "<kbd>Ctrl</kbd> + <kbd>Z</kbd>で元に戻す",
+                hint_redo: "<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>でやり直し",
+                hint_save: "<kbd>Ctrl</kbd> + <kbd>S</kbd>で保存",
+                hint_load: "<kbd>Ctrl</kbd> + <kbd>L</kbd>で読み込み",
+                sidebar_customize: "カスタマイズ",
+                sidebar_block: "ブロック",
+                sidebar_background: "背景",
+                sidebar_border: "枠線",
+                sidebar_handles: "ハンドル",
+                sidebar_color: "色",
+                sidebar_visible: "表示",
+                sidebar_text: "テキスト",
+                sidebar_size: "サイズ (px)",
+                sidebar_font: "フォント",
+                font_default: "デフォルト",
+                sidebar_embed: "埋め込みリンク",
+                sidebar_arrow: "矢印",
+                sidebar_grid: "グリッド",
+                sidebar_lines: "線",
+                sidebar_slides: "スライド",
+                sidebar_actions: "アクション",
+                btn_add_content: "追加",
+                btn_arrow_mode: "矢印モード",
+                btn_save: "保存",
+                btn_load: "読み込み",
+                btn_snap: "スナップ",
+                menu_add: "追加",
+                menu_add_text: "テキストブロック",
+                menu_from_file: "ファイルから >",
+                menu_add_media: "画像 / 動画",
+                menu_add_pdf: "PDFをスライドとして",
+                menu_from_link: "リンクから >",
+                color_picker_title: "カラーピッカー",
+                btn_cancel: "キャンセル",
+                btn_confirm: "確認",
+                toast_snap_on: "グリッドスナップが有効になりました",
+                toast_snap_off: "グリッドスナップが無効になりました",
+                toast_page_added: "スライド {page} を追加しました",
+                toast_page_deleted: "スライド {page} を削除しました",
+                toast_cant_delete_last: "最後のスライドは削除できません。",
+                toast_pdf_importing: "{name} をインポートしています… しばらくお待ちください。",
+                toast_pdf_success: "{numPages}枚のスライドのインポートに成功しました。",
+                toast_pdf_error: "PDFのインポートに失敗しました。詳細はコンソールを確認してください。",
+                toast_file_loaded: "ファイルの読み込みに成功しました！",
+                toast_file_error: "ファイルの読み込みに失敗しました。破損している可能性があります。",
+                toast_media_error: "URLから画像または動画を読み込めませんでした。",
+                prompt_media_url: "画像または動画のURLを入力してください (YouTube, Vimeoなど):",
+                prompt_pdf_url: "スライドとしてインポートするPDFのURLを入力してください:",
+                prompt_desmos_url: "DesmosグラフのURLを入力してください:",
+                prompt_geogebra_url: "GeoGebraアプレットのURLを入力してください (例: 共有 > 埋め込みから):",
+                initial_block_0: "MentMapへようこそ！👋\nこれはあなたの無限のキャンバスです。ダブルクリックで編集できます。",
+                initial_block_1: "ナビゲーション\nマウスホイールでズームします。SHIFTキーを押しながらドラッグしてマップを移動します。",
+                initial_block_2: "コンテンツの追加\n右クリックでブロック、画像、動画、埋め込みリンク（PDF、Desmos）を追加します。",
+                initial_block_3: "アイデアをつなぐ\n「矢印モード」を有効にするか、CTRLキーを押しながらブロック間をドラッグして接続を作成します。",
+                initial_block_4: "カスタマイズ\n「G」キーでパネルを開きます。アイテムを選択してオプションを表示します。ヒント：「B」キーでスマートカラーパレット！",
+                initial_block_5: "クイック編集\nShift+Dで複製、Deleteで削除、Ctrl+Zで元に戻す/やり直します。",
+                initial_block_6: "プレゼンテーションとファイル\n「スライド」コントロールを使用してプレゼンテーションを作成します。作業内容を保存（Ctrl+S）し、読み込み（Ctrl+L）ます。",
+            },
+            'zh': {
+                page_title: "交互式画布 - MentMap",
+                coords_nothing: "未选择任何内容",
+                coords_items: "个项目已选择",
+                coords_arrow: "箭头已选择",
+                hint_toggle: "按 <kbd>H</kbd> 切换快捷键提示",
+                hint_nav_title: "导航和视图:",
+                hint_pan: "按住 <kbd>Shift</kbd> 或 <kbd>中键单击</kbd> 来平移地图",
+                hint_zoom: "使用<kbd>滚轮</kbd>进行缩放",
+                hint_slides: "使用 <kbd>←</kbd> / <kbd>→</kbd> 切换幻灯片",
+                hint_sidebar: "使用 <kbd>G</kbd> 隐藏/显示侧边栏",
+                hint_coords: "使用 <kbd>N</kbd> 隐藏/显示坐标",
+                hint_actions_title: "操作和快捷键:",
+                hint_add: "使用 <kbd>Shift</kbd> + <kbd>A</kbd> 添加内容",
+                hint_duplicate: "使用 <kbd>Shift</kbd> + <kbd>D</kbd> 复制/添加",
+                hint_add_slide: "使用 <kbd>Shift</kbd> + <kbd>+</kbd> 添加幻灯片",
+                hint_delete_slide: "使用 <kbd>Shift</kbd> + <kbd>-</kbd> 删除幻灯片",
+                hint_smart_color: "使用 <kbd>B</kbd> 打开智能调色板",
+                hint_delete: "使用 <kbd>Delete</kbd> 删除项目",
+                hint_undo: "使用 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 撤销",
+                hint_redo: "使用 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> 重做",
+                hint_save: "使用 <kbd>Ctrl</kbd> + <kbd>S</kbd> 保存",
+                hint_load: "使用 <kbd>Ctrl</kbd> + <kbd>L</kbd> 加载",
+                sidebar_customize: "自定义",
+                sidebar_block: "块",
+                sidebar_background: "背景",
+                sidebar_border: "边框",
+                sidebar_handles: "句柄",
+                sidebar_color: "颜色",
+                sidebar_visible: "可见",
+                sidebar_text: "文本",
+                sidebar_size: "大小 (px)",
+                sidebar_font: "字体",
+                font_default: "默认",
+                sidebar_embed: "嵌入链接",
+                sidebar_arrow: "箭头",
+                sidebar_grid: "网格",
+                sidebar_lines: "线条",
+                sidebar_slides: "幻灯片",
+                sidebar_actions: "操作",
+                btn_add_content: "添加内容",
+                btn_arrow_mode: "箭头模式",
+                btn_save: "保存",
+                btn_load: "加载",
+                btn_snap: "吸附",
+                menu_add: "添加",
+                menu_add_text: "文本块",
+                menu_from_file: "从文件 >",
+                menu_add_media: "图像 / 视频",
+                menu_add_pdf: "PDF转幻灯片",
+                menu_from_link: "从链接 >",
+                color_picker_title: "颜色选择器",
+                btn_cancel: "取消",
+                btn_confirm: "确认",
+                toast_snap_on: "网格吸附已启用",
+                toast_snap_off: "网格吸附已禁用",
+                toast_page_added: "已添加幻灯片 {page}",
+                toast_page_deleted: "已删除幻灯片 {page}",
+                toast_cant_delete_last: "无法删除最后一张幻灯片。",
+                toast_pdf_importing: "正在导入 {name}… 这可能需要一些时间。",
+                toast_pdf_success: "成功导入 {numPages} 张幻灯片。",
+                toast_pdf_error: "导入PDF失败。请查看控制台了解详情。",
+                toast_file_loaded: "文件加载成功！",
+                toast_file_error: "文件加载失败。文件可能已损坏。",
+                toast_media_error: "无法从URL加载图像或视频。",
+                prompt_media_url: "输入图像或视频URL（YouTube, Vimeo等）:",
+                prompt_pdf_url: "输入要作为幻灯片导入的PDF URL:",
+                prompt_desmos_url: "输入Desmos图表URL:",
+                prompt_geogebra_url: "输入GeoGebra小程序URL（例如，从分享 > 嵌入）:",
+                initial_block_0: "欢迎来到 MentMap！👋\n这是您的无限画布。双击进行编辑。",
+                initial_block_1: "导航\n使用鼠标滚轮进行缩放。按住SHIFT并拖动以平移地图。",
+                initial_block_2: "添加内容\n右键单击以添加块、图像、视频和嵌入式链接（PDF、Desmos）。",
+                initial_block_3: "连接想法\n启用“箭头模式”或按住CTRL并从一个块拖动到另一个块以创建连接。",
+                initial_block_4: "自定义\n按“G”打开面板。选择一个项目以查看其选项。提示：按“B”可使用智能调色板！",
+                initial_block_5: "快速编辑\n使用Shift+D复制，使用Delete删除，并使用Ctrl+Z撤销/重做。",
+                initial_block_6: "演示文稿和文件\n使用“幻灯片”控件创建演示文稿。保存（Ctrl+S）和加载（Ctrl+L）您的工作。",
+            }
+        };
+        let currentLangStrings = translations['en'];
+
+        function setLanguage(lang) {
+            const langCode = lang.split('-')[0];
+            const supportedLangs = ['pt', 'en', 'ja', 'zh'];
+            const finalLang = supportedLangs.includes(langCode) ? langCode : 'en';
+
+            currentLangStrings = translations[finalLang];
+            document.documentElement.lang = finalLang;
+
+            document.querySelectorAll('[data-translate-key]').forEach(el => {
+                const key = el.dataset.translateKey;
+                if (currentLangStrings[key]) {
+                    // Salva os KBDs para não serem sobrescritos
+                    const kbdElements = el.querySelectorAll('kbd');
+                    // Substitui o texto, usando uma expressão regular para placeholders
+                    let text = currentLangStrings[key];
+                    // Para os hints, o HTML já está no objeto de tradução
+                    if (key.startsWith('hint_')) {
+                        el.innerHTML = text;
+                    } else {
+                        el.textContent = text;
+                    }
+                }
+            });
+             document.title = currentLangStrings.page_title;
+        }
+
+
         const container = document.getElementById('container');
         const grid = document.getElementById('grid');
         const svgCanvas = document.getElementById('arrow-svg');
@@ -695,6 +1049,8 @@
         let historyIndex = -1;
         const MAX_HISTORY_STATES = 32;
 
+        setLanguage(navigator.language);
+
         shortcutHint.style.display = 'block';
         setTimeout(() => {
             shortcutHint.style.display = 'none';
@@ -704,20 +1060,13 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    // Center
-                    { x: 900, y: 600, width: '280px', contentModel: [{ text: "Bem-vindo ao MentMap! 👋\nEste é o seu canvas infinito. Dê um duplo clique para editar.", style: {} }], id: 'block-0' },
-                    
-                    // Top Branch: Navigation
-                    { x: 900, y: 350, width: '280px', contentModel: [{ text: "NAVEGAÇÃO\nUse a Roda do Mouse para dar zoom. Segure SHIFT e arraste para mover o mapa.", style: {} }], id: 'block-1' },
-
-                    // Right Branch: Content Creation
-                    { x: 1300, y: 600, width: '280px', contentModel: [{ text: "ADICIONAR CONTEÚDO\nClique com o botão direito para adicionar blocos, imagens, vídeos e links incorporados (PDFs, Desmos).", style: {} }], id: 'block-2' },
-                    { x: 1300, y: 850, width: '280px', contentModel: [{ text: "CONECTAR IDEIAS\nAtive o 'Modo Seta' ou segure CTRL e arraste de um bloco para outro para criar uma conexão.", style: {} }], id: 'block-3' },
-
-                    // Left Branch: Customization & Management
-                    { x: 500, y: 350, width: '280px', contentModel: [{ text: "CUSTOMIZAÇÃO\nAbra o painel com 'G'. Selecione um item para ver suas opções. Dica: Pressione 'B' para uma paleta de cores inteligente!", style: {} }], id: 'block-4' },
-                    { x: 500, y: 600, width: '280px', contentModel: [{ text: "EDIÇÃO RÁPIDA\nDuplique com Shift+D, apague com Delete, e desfaça/refaça com Ctrl+Z.", style: {} }], id: 'block-5' },
-                    { x: 500, y: 850, width: '280px', contentModel: [{ text: "APRESENTAÇÕES E ARQUIVOS\nUse os controles de 'Slides' para criar uma apresentação. Salve (Ctrl+S) e Carregue (Ctrl+L) seu trabalho.", style: {} }], id: 'block-6' }
+                    { x: 830, y: 450, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_0, style: {} }], id: 'block-0' },
+                    { x: 830, y: 200, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_1, style: {} }], id: 'block-1' },
+                    { x: 1230, y: 450, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_2, style: {} }], id: 'block-2' },
+                    { x: 1230, y: 700, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_3, style: {} }], id: 'block-3' },
+                    { x: 430, y: 200, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_4, style: {} }], id: 'block-4' },
+                    { x: 430, y: 450, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_5, style: {} }], id: 'block-5' },
+                    { x: 430, y: 700, width: '280px', contentModel: [{ text: currentLangStrings.initial_block_6, style: {} }], id: 'block-6' }
                 ],
                 arrows: [
                     { startBlock: 'block-0', endBlock: 'block-1', color: '#0d82e8', width: '3' },
@@ -727,7 +1076,7 @@
                     { startBlock: 'block-0', endBlock: 'block-5', color: '#0d82e8', width: '3' },
                     { startBlock: 'block-0', endBlock: 'block-6', color: '#0d82e8', width: '3' }
                 ],
-                viewport: { gridX: -850, gridY: -450, scale: 0.8 }, // Adjusted viewport to move map down and right
+                viewport: { gridX: 0, gridY: 0, scale: 0.7 }, // Zoom inicial ajustado para 70%
                 styles: {}
             };
             blockCounter = 7;
@@ -764,7 +1113,7 @@
         toggleSnapBtn.addEventListener('click', () => {
             isSnapEnabled = !isSnapEnabled;
             toggleSnapBtn.classList.toggle('active', isSnapEnabled);
-            showToast(`Encaixe na Grade ${isSnapEnabled ? 'Ativado' : 'Desativado'}`);
+            showToast(isSnapEnabled ? currentLangStrings.toast_snap_on : currentLangStrings.toast_snap_off);
         });
         saveBtn.addEventListener('click', saveAllPages);
         loadBtn.addEventListener('click', () => fileLoader.click());
@@ -897,6 +1246,11 @@
             
             renderContent(block.contentModel, contentEl);
 
+            // Adiciona a classe 'has-iframe' se necessário
+            if (contentEl.querySelector('iframe')) {
+                contentEl.classList.add('has-iframe');
+            }
+
 
             const handles = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
             handles.forEach(handle => {
@@ -929,9 +1283,8 @@
                 coords = screenToGridCoords((window.innerWidth - 300) / 2, window.innerHeight / 2);
             }
             
-            const contentModel = text.includes('<iframe') || text.includes('<video') || text.includes('<img')
-                ? [{ text: text, style: {}, isHTML: true }]
-                : [{ text: text, style: {} }];
+            const isEmbed = text.includes('<iframe') || text.includes('<video') || text.includes('<img');
+            const contentModel = isEmbed ? [{ text: text, style: {}, isHTML: true }] : [{ text: text, style: {} }];
 
             let config = { x: coords.x, y: coords.y, contentModel: contentModel };
             Object.assign(config, options);
@@ -1125,7 +1478,7 @@
             
             const actionMap = {
                 'add-text': () => { 
-                    lastBlockCreationAction = () => addNewBlock('Novo bloco de texto.');
+                    lastBlockCreationAction = () => addNewBlock(currentLangStrings.menu_add_text);
                     lastBlockCreationAction();
                 },
                 'add-media-file': () => {
@@ -1146,7 +1499,7 @@
                                         const maxWidth = 800;
                                         const newWidth = Math.min(img.width, maxWidth);
                                         const newHeight = newWidth * aspectRatio;
-                                        const html = `<img src="${dataUrl}" alt="Conteúdo do usuário">`;
+                                        const html = `<img src="${dataUrl}" alt="User content">`;
                                         addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
                                     };
                                     img.src = dataUrl;
@@ -1182,7 +1535,7 @@
                 },
                 'add-media-link': () => {
                     const createMediaLinkBlock = () => {
-                        const url = prompt('Insira a URL da Imagem ou Vídeo (YouTube, Vimeo, etc.):');
+                        const url = prompt(currentLangStrings.prompt_media_url);
                         if (!url) return;
 
                         let embedUrl;
@@ -1203,11 +1556,11 @@
                                 const maxWidth = 800;
                                 const newWidth = Math.min(img.width, maxWidth);
                                 const newHeight = newWidth * aspectRatio;
-                                const html = `<img src="${url}" alt="Conteúdo do usuário">`;
+                                const html = `<img src="${url}" alt="User content">`;
                                 addNewBlock(html, { width: `${newWidth}px`, height: `${newHeight}px` });
                             };
                             img.onerror = () => {
-                                showToast('Não foi possível carregar a imagem ou vídeo da URL.');
+                                showToast(currentLangStrings.toast_media_error);
                             };
                             img.src = url;
                         }
@@ -1217,18 +1570,18 @@
                 },
                 'add-pdf-link': () => {
                     const createPdfLinkBlock = () => {
-                        const url = prompt('Insira a URL do PDF para importar como slides:');
+                        const url = prompt(currentLangStrings.prompt_pdf_url);
                         if (url) {
-                            showToast('Buscando PDF da URL...', 5000);
+                            showToast(currentLangStrings.toast_pdf_importing.replace('{name}', 'URL'), 5000);
                             fetch(url)
                                 .then(response => {
-                                    if (!response.ok) throw new Error(`Erro de HTTP! status: ${response.status}`);
+                                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                                     return response.arrayBuffer();
                                 })
                                 .then(arrayBuffer => processPdfData(arrayBuffer, url))
                                 .catch(e => {
-                                    console.error("Erro ao buscar PDF da URL:", e);
-                                    showToast('Falha ao buscar ou processar o PDF. Verifique a política de CORS ou a URL.');
+                                    console.error("Error fetching PDF from URL:", e);
+                                    showToast(currentLangStrings.toast_pdf_error);
                                 });
                         }
                     };
@@ -1237,20 +1590,20 @@
                 },
                 'add-desmos-link': () => {
                     const createDesmosBlock = () => {
-                        const desmosUrl = prompt('Insira a URL do gráfico Desmos:');
+                        const desmosUrl = prompt(currentLangStrings.prompt_desmos_url);
                         if (desmosUrl && desmosUrl.includes('desmos.com/calculator')) addNewBlock(`<iframe src="${desmosUrl}"></iframe>`, { width: '600px', height: '400px' });
-                        else if (desmosUrl) showToast('URL do Desmos inválida.');
+                        else if (desmosUrl) showToast('Invalid Desmos URL.');
                     };
                     lastBlockCreationAction = createDesmosBlock;
                     lastBlockCreationAction();
                 },
                 'add-geogebra-link': () => {
                     const createGeoGebraBlock = () => {
-                        const geoGebraUrl = prompt('Insira a URL do applet GeoGebra (ex: de compartilhar > incorporar):');
+                        const geoGebraUrl = prompt(currentLangStrings.prompt_geogebra_url);
                         if (geoGebraUrl && geoGebraUrl.includes('geogebra.org')) {
                             addNewBlock(`<iframe src="${geoGebraUrl}" style="border:0px;width:100%;height:100%;" allowfullscreen></iframe>`, { width: '600px', height: '450px' });
                         } else if (geoGebraUrl) {
-                            showToast('URL do GeoGebra inválida.');
+                            showToast('Invalid GeoGebra URL.');
                         }
                     };
                     lastBlockCreationAction = createGeoGebraBlock;
@@ -1754,7 +2107,7 @@
 
         function updateCoordinates(e = null) {
             if (selection.length > 1) {
-                coordsDisplay.innerHTML = `${selection.length} itens selecionados | Z: ${Math.round(scale * 100)}%`;
+                coordsDisplay.innerHTML = `${selection.length} ${currentLangStrings.coords_items} | Z: ${Math.round(scale * 100)}%`;
             } else if (selection.length === 1) {
                 const item = selection[0];
                 if (item.classList.contains('block')) {
@@ -1762,13 +2115,13 @@
                     const y = parseInt(item.style.top);
                     coordsDisplay.innerHTML = `X: ${x}, Y: ${y} | Z: ${Math.round(scale * 100)}%`;
                 } else if (item.classList.contains('arrow-group')) {
-                    coordsDisplay.innerHTML = `Seta selecionada | Z: ${Math.round(scale * 100)}%`;
+                    coordsDisplay.innerHTML = `${currentLangStrings.coords_arrow} | Z: ${Math.round(scale * 100)}%`;
                 }
             } else if (e) {
                 const mouseCoords = screenToGridCoords(e.clientX, e.clientY);
                 coordsDisplay.innerHTML = `X: ${Math.round(mouseCoords.x)}, Y: ${Math.round(mouseCoords.y)} | Z: ${Math.round(scale * 100)}%`;
             } else {
-                coordsDisplay.innerHTML = `Nada selecionado | Z: ${Math.round(scale * 100)}%`;
+                coordsDisplay.innerHTML = `${currentLangStrings.coords_nothing} | Z: ${Math.round(scale * 100)}%`;
             }
         }
         
@@ -2091,11 +2444,11 @@
 
             currentPageIndex = index;
             const pageState = pages[currentPageIndex];
-            applyPageState(pageState);
+            applyPageState(pageState, isFirstLoad);
             updatePageUI();
         }
 
-        function applyPageState(state) {
+        function applyPageState(state, isFirstLoad = false) {
             document.querySelectorAll('.block').forEach(b => b.remove());
             svgCanvas.querySelectorAll('.arrow-group').forEach(ag => ag.remove());
             
@@ -2105,9 +2458,16 @@
 
             deselectAll();
             
-            gridX = state.viewport?.gridX || 0;
-            gridY = state.viewport?.gridY || 0;
-            scale = state.viewport?.scale || 1;
+            // Corrige o problema do posicionamento inicial
+            if (isFirstLoad) {
+                gridX = 0;
+                gridY = 0;
+                scale = state.viewport?.scale || 0.9;
+            } else {
+                gridX = state.viewport?.gridX || 0;
+                gridY = state.viewport?.gridY || 0;
+                scale = state.viewport?.scale || 1;
+            }
             updateGridTransform();
 
             document.body.style.background = state.styles?.gridBg || 'linear-gradient(90deg, var(--background-start), var(--background-end), var(--background-start))';
@@ -2141,7 +2501,7 @@
         }
         
         function updatePageUI() {
-            pageDisplay.textContent = `Slide ${currentPageIndex + 1} / ${pages.length}`;
+            pageDisplay.textContent = `${currentLangStrings.sidebar_slides} ${currentPageIndex + 1} / ${pages.length}`;
             prevPageBtn.disabled = currentPageIndex === 0;
             nextPageBtn.disabled = currentPageIndex >= pages.length - 1;
             deletePageBtn.disabled = pages.length <= 1;
@@ -2161,12 +2521,12 @@
             pages.push(newPage);
             loadPage(pages.length - 1);
             recordState();
-            showToast(`Slide ${pages.length} adicionado`);
+            showToast(currentLangStrings.toast_page_added.replace('{page}', pages.length));
         }
 
         function deleteCurrentPage() {
             if (pages.length <= 1) {
-                showToast("Não é possível deletar o último slide.");
+                showToast(currentLangStrings.toast_cant_delete_last);
                 return;
             }
             const pageHasContent = pages[currentPageIndex] && pages[currentPageIndex].blocks.length > 0;
@@ -2181,7 +2541,7 @@
                 const newIndex = Math.min(currentPageIndex, pages.length - 1);
                 loadPage(newIndex, true); 
                 recordState();
-                showToast(`Slide ${deletedPageIndex} deletado`);
+                showToast(currentLangStrings.toast_page_deleted.replace('{page}', deletedPageIndex));
             }
         }
         
@@ -2201,7 +2561,7 @@
         }
 
         async function processPdfData(pdfData, sourceName) {
-            showToast(`Importando ${sourceName}... Isso pode levar um momento.`, 10000);
+            showToast(currentLangStrings.toast_pdf_importing.replace('{name}', sourceName), 10000);
             try {
                 const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
 
@@ -2237,7 +2597,7 @@
                     const blockX = Math.max(0, gridCenter.x - blockWidth / 2);
                     const blockY = Math.max(0, gridCenter.y - blockHeight / 2);
                     
-                    const imageHtml = `<img src="${imageDataUrl}" style="width:100%; height:100%;" alt="Página de PDF ${i}">`;
+                    const imageHtml = `<img src="${imageDataUrl}" style="width:100%; height:100%;" alt="PDF Page ${i}">`;
                     
                     const newPage = {
                         blocks: [{
@@ -2260,10 +2620,10 @@
 
                 loadPage(importStartIndex, true);
                 recordState();
-                showToast(`Importado com sucesso ${pdf.numPages} slides.`, 3000);
+                showToast(currentLangStrings.toast_pdf_success.replace('{numPages}', pdf.numPages), 3000);
             } catch (error) {
-                console.error('Erro ao importar PDF:', error);
-                showToast('Falha ao importar PDF. Veja o console para detalhes.', 3000);
+                console.error('Error importing PDF:', error);
+                showToast(currentLangStrings.toast_pdf_error, 3000);
             }
         }
 
@@ -2273,7 +2633,7 @@
                 formatVersion: "3.0",
                 pages: pages
             };
-            download('mentmap-apresentacao.json', JSON.stringify(state, null, 2));
+            download('mentmap-presentation.json', JSON.stringify(state, null, 2));
         }
 
         function loadAllPages(event) {
@@ -2286,17 +2646,16 @@
                     if (loadedData.pages && Array.isArray(loadedData.pages)) {
                         pages = loadedData.pages;
                     } else {
-                        // For backwards compatibility with older formats
                         pages = [loadedData];
                     }
                     loadPage(0, true);
                     history = [];
                     historyIndex = -1;
                     recordState();
-                    showToast('Arquivo carregado com sucesso!');
+                    showToast(currentLangStrings.toast_file_loaded);
                 } catch (err) {
-                    console.error('Erro ao analisar JSON:', err);
-                    showToast('Falha ao carregar arquivo. Pode estar corrompido.');
+                    console.error('Error parsing JSON:', err);
+                    showToast(currentLangStrings.toast_file_error);
                 }
             };
             reader.readAsText(file);
@@ -2783,3 +3142,5 @@
 </script>
 </body>
 </html>
+
+
