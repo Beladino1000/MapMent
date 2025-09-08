@@ -1,10 +1,8 @@
 <!DOCTYPE html>
-<!-- O atributo lang será definido dinamicamente -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- O título será definido dinamicamente -->
     <title>Interactive Canvas - MentMap</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -215,10 +213,11 @@
         
         .coordinates {
             position: fixed; 
-            bottom: 10px; 
+            top: 10px; 
             left: 10px;
-            background: var(--panel-bg);
-            backdrop-filter: blur(10px);
+            background: rgba(23, 25, 43, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: var(--text-light); 
             padding: 8px 12px;
             border-radius: 8px; 
@@ -231,7 +230,7 @@
         }
         .coordinates.hidden {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(-10px);
             pointer-events: none;
         }
         .coordinates input {
@@ -247,9 +246,11 @@
         .shortcut-hint {
             position: fixed;
             top: 10px;
-            left: 10px;
-            background: var(--panel-bg);
-            backdrop-filter: blur(10px);
+            right: 265px;
+            left: auto;
+            background: rgba(23, 25, 43, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: var(--text-light);
             padding: 10px 15px;
             border-radius: 8px;
@@ -355,8 +356,9 @@
             right: 0;
             width: 250px;
             height: 100vh;
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
+            background: rgba(23, 25, 43, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: var(--text-light);
             box-shadow: -5px 0 25px rgba(0,0,0,0.5);
             border-left: 1px solid var(--border-color);
@@ -619,6 +621,7 @@
                     <li data-action="add-pdf-link" data-translate-key="menu_add_pdf">PDF como Slides</li>
                     <li data-action="add-desmos-link">Desmos</li>
                     <li data-action="add-geogebra-link">GeoGebra</li>
+                    <li data-action="add-phet-link" data-translate-key="menu_add_phet">PhET Colorado</li>
                 </ul>
             </li>
         </ul>
@@ -712,6 +715,7 @@
                 menu_from_file: "Do Arquivo >",
                 menu_add_media: "Imagem / Vídeo",
                 menu_add_pdf: "PDF como Slides",
+                menu_add_phet: "PhET Colorado",
                 menu_from_link: "Do Link >",
                 color_picker_title: "Seletor de Cores",
                 btn_cancel: "Cancelar",
@@ -731,6 +735,7 @@
                 prompt_pdf_url: "Insira a URL do PDF para importar como slides:",
                 prompt_desmos_url: "Insira a URL do gráfico Desmos:",
                 prompt_geogebra_url: "Insira a URL do applet GeoGebra (ex: de compartilhar > incorporar):",
+                prompt_phet_url: "Insira a URL da simulação PhET Colorado:",
                 initial_block_0: "Bem-vindo ao MentMap! 👋\nEste é o seu canvas infinito. Dê um duplo clique para editar.",
                 initial_block_1: "NAVEGAÇÃO\nUse a Roda do Mouse para dar zoom. Segure SHIFT e arraste para mover o mapa.",
                 initial_block_2: "ADICIONAR CONTEÚDO\nClique com o botão direito para adicionar blocos, imagens, vídeos e links incorporados (PDFs, Desmos).",
@@ -789,6 +794,7 @@
                 menu_from_file: "From File >",
                 menu_add_media: "Image / Video",
                 menu_add_pdf: "PDF as Slides",
+                menu_add_phet: "PhET Colorado",
                 menu_from_link: "From Link >",
                 color_picker_title: "Color Picker",
                 btn_cancel: "Cancel",
@@ -808,6 +814,7 @@
                 prompt_pdf_url: "Enter PDF URL to import as slides:",
                 prompt_desmos_url: "Enter the Desmos graph URL:",
                 prompt_geogebra_url: "Enter the GeoGebra applet URL (e.g., from share > embed):",
+                prompt_phet_url: "Enter the PhET Colorado simulation URL:",
                 initial_block_0: "Welcome to MentMap! 👋\nThis is your infinite canvas. Double-click to edit.",
                 initial_block_1: "NAVIGATION\nUse the Mouse Wheel to zoom. Hold SHIFT and drag to pan the map.",
                 initial_block_2: "ADD CONTENT\nRight-click to add blocks, images, videos, and embedded links (PDFs, Desmos).",
@@ -866,6 +873,7 @@
                 menu_from_file: "ファイルから >",
                 menu_add_media: "画像 / 動画",
                 menu_add_pdf: "PDFをスライドとして",
+                menu_add_phet: "PhETコロラド",
                 menu_from_link: "リンクから >",
                 color_picker_title: "カラーピッカー",
                 btn_cancel: "キャンセル",
@@ -885,6 +893,7 @@
                 prompt_pdf_url: "スライドとしてインポートするPDFのURLを入力してください:",
                 prompt_desmos_url: "DesmosグラフのURLを入力してください:",
                 prompt_geogebra_url: "GeoGebraアプレットのURLを入力してください (例: 共有 > 埋め込みから):",
+                prompt_phet_url: "PhET ColoradoシミュレーションのURLを入力してください:",
                 initial_block_0: "MentMapへようこそ！👋\nこれはあなたの無限のキャンバスです。ダブルクリックで編集できます。",
                 initial_block_1: "ナビゲーション\nマウスホイールでズームします。SHIFTキーを押しながらドラッグしてマップを移動します。",
                 initial_block_2: "コンテンツの追加\n右クリックでブロック、画像、動画、埋め込みリンク（PDF、Desmos）を追加します。",
@@ -943,6 +952,7 @@
                 menu_from_file: "从文件 >",
                 menu_add_media: "图像 / 视频",
                 menu_add_pdf: "PDF转幻灯片",
+                menu_add_phet: "PhET 科罗拉多",
                 menu_from_link: "从链接 >",
                 color_picker_title: "颜色选择器",
                 btn_cancel: "取消",
@@ -962,6 +972,7 @@
                 prompt_pdf_url: "输入要作为幻灯片导入的PDF URL:",
                 prompt_desmos_url: "输入Desmos图表URL:",
                 prompt_geogebra_url: "输入GeoGebra小程序URL（例如，从分享 > 嵌入）:",
+                prompt_phet_url: "输入PhET Colorado模拟的URL:",
                 initial_block_0: "欢迎来到 MentMap！👋\n这是您的无限画布。双击进行编辑。",
                 initial_block_1: "导航\n使用鼠标滚轮进行缩放。按住SHIFT并拖动以平移地图。",
                 initial_block_2: "添加内容\n右键单击以添加块、图像、视频和嵌入式链接（PDF、Desmos）。",
@@ -1024,6 +1035,7 @@
         let isResizing = false;
         let isMarqueeSelecting = false;
         let isSnapEnabled = true;
+        let isEditingCoords = false; // State to fix coordinates editing bug
         let resizeDirection = '';
         let resizeInitialRect = null; 
         let currentBlock = null, arrowStartBlock = null;
@@ -1608,6 +1620,18 @@
                     };
                     lastBlockCreationAction = createGeoGebraBlock;
                     lastBlockCreationAction();
+                },
+                'add-phet-link': () => {
+                    const createPhetBlock = () => {
+                        const phetUrl = prompt(currentLangStrings.prompt_phet_url);
+                        if (phetUrl && phetUrl.includes('phet.colorado.edu')) {
+                            addNewBlock(`<iframe src="${phetUrl}" style="border:0px;width:100%;height:100%;" allowfullscreen scrolling="no"></iframe>`, { width: '800px', height: '600px' });
+                        } else if (phetUrl) {
+                            showToast('Invalid PhET Colorado URL.');
+                        }
+                    };
+                    lastBlockCreationAction = createPhetBlock;
+                    lastBlockCreationAction();
                 }
             };
 
@@ -2106,6 +2130,7 @@
         }
 
         function updateCoordinates(e = null) {
+            if (isEditingCoords) return;
             if (selection.length > 1) {
                 coordsDisplay.innerHTML = `${selection.length} ${currentLangStrings.coords_items} | Z: ${Math.round(scale * 100)}%`;
             } else if (selection.length === 1) {
@@ -2126,45 +2151,57 @@
         }
         
         function editCoordinates(e) {
-            if (e.target.tagName === 'INPUT') return;
+            if (e.target.tagName === 'INPUT' || isEditingCoords) return;
             e.stopPropagation();
+
             const blockToEdit = lastSelectedItem?.classList.contains('block') ? lastSelectedItem : null;
             if (!blockToEdit) return;
+
+            isEditingCoords = true;
+
             const x = parseInt(blockToEdit.style.left); 
             const y = parseInt(blockToEdit.style.top);
             coordsDisplay.innerHTML = `X: <input type="number" value="${x}" id="coord-x"> Y: <input type="number" value="${y}" id="coord-y">`;
+            
             const inputX = document.getElementById('coord-x'); 
             const inputY = document.getElementById('coord-y');
             inputX.focus(); 
             inputX.select();
+
             const applyAndClose = () => {
                 const newX = parseInt(inputX.value || 0);
                 const newY = parseInt(inputY.value || 0);
                 const gridSize = 30;
                 blockToEdit.style.left = `${Math.max(0, Math.round(newX / gridSize) * gridSize)}px`;
                 blockToEdit.style.top = `${Math.max(0, Math.round(newY / gridSize) * gridSize)}px`;
+                
+                isEditingCoords = false;
                 updateArrowsForBlock(blockToEdit); 
                 updateCoordinates();
                 document.removeEventListener('click', handleClickOutside, true);
                 document.removeEventListener('keydown', handleInputKeyDown, true);
                 recordState();
             };
+
             const handleInputKeyDown = (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     applyAndClose();
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
+                    isEditingCoords = false;
                     updateCoordinates(); 
                     document.removeEventListener('click', handleClickOutside, true);
                     document.removeEventListener('keydown', handleInputKeyDown, true);
                 }
             };
+
             const handleClickOutside = (e) => {
                 if (!coordsDisplay.contains(e.target)) {
                     applyAndClose();
                 }
             };
+            
             setTimeout(() => {
                 document.addEventListener('click', handleClickOutside, true);
                 document.addEventListener('keydown', handleInputKeyDown, true);
@@ -3142,5 +3179,3 @@
 </script>
 </body>
 </html>
-
-
