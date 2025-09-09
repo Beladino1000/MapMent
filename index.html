@@ -442,17 +442,17 @@
             border-radius: 4px;
             margin-bottom: 5px;
             background: rgba(0,0,0,0.2);
-            cursor: pointer;
+            cursor: grab;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, border-top 0.2s;
         }
         #blocks-list li:hover { background: rgba(255,255,255,0.2); }
         #blocks-list li.selected { background: var(--glow-color); }
         #blocks-list li.dragging {
             opacity: 0.4;
-            border: 1px dashed var(--glow-color);
+            background: var(--glow-color);
         }
         
         #rename-block-form {
@@ -982,14 +982,14 @@
             populateFontSizeSelector();
             const initialPage = {
                 blocks: [
-                    { x: 830, y: 100, width: '280px', name: "Boas-vindas", contentModel: [{ text: currentLangStrings.flowchart_block_0, style: {} }], id: 'block-0', zIndex: 1 },
-                    { x: 830, y: 280, width: '280px', name: "Navegação", contentModel: [{ text: currentLangStrings.flowchart_block_1, style: {} }], id: 'block-1', zIndex: 2 },
-                    { x: 830, y: 460, width: '280px', name: "Adicionar Conteúdo", contentModel: [{ text: currentLangStrings.flowchart_block_2, style: {} }], id: 'block-2', zIndex: 3 },
-                    { x: 830, y: 640, width: '280px', name: "Editar Texto", contentModel: [{ text: currentLangStrings.flowchart_block_3, style: {} }], id: 'block-3', zIndex: 4 },
-                    { x: 830, y: 820, width: '280px', name: "Conectar Ideias", contentModel: [{ text: currentLangStrings.flowchart_block_4, style: {} }], id: 'block-4', zIndex: 5 },
-                    { x: 830, y: 1000, width: '280px', name: "Customizar", contentModel: [{ text: currentLangStrings.flowchart_block_5, style: {} }], id: 'block-5', zIndex: 6 },
-                    { x: 830, y: 1180, width: '280px', name: "Ações Rápidas", contentModel: [{ text: currentLangStrings.flowchart_block_6, style: {} }], id: 'block-6', zIndex: 7 },
-                    { x: 830, y: 1360, width: '280px', name: "Salvar e Apresentar", contentModel: [{ text: currentLangStrings.flowchart_block_7, style: {} }], id: 'block-7', zIndex: 8 }
+                    { x: 830, y: 100, width: '280px', name: "Boas-vindas", contentModel: [{ text: currentLangStrings.flowchart_block_0, style: {} }], id: 'block-0', zIndex: 8 },
+                    { x: 830, y: 280, width: '280px', name: "Navegação", contentModel: [{ text: currentLangStrings.flowchart_block_1, style: {} }], id: 'block-1', zIndex: 7 },
+                    { x: 830, y: 460, width: '280px', name: "Adicionar Conteúdo", contentModel: [{ text: currentLangStrings.flowchart_block_2, style: {} }], id: 'block-2', zIndex: 6 },
+                    { x: 830, y: 640, width: '280px', name: "Editar Texto", contentModel: [{ text: currentLangStrings.flowchart_block_3, style: {} }], id: 'block-3', zIndex: 5 },
+                    { x: 830, y: 820, width: '280px', name: "Conectar Ideias", contentModel: [{ text: currentLangStrings.flowchart_block_4, style: {} }], id: 'block-4', zIndex: 4 },
+                    { x: 830, y: 1000, width: '280px', name: "Customizar", contentModel: [{ text: currentLangStrings.flowchart_block_5, style: {} }], id: 'block-5', zIndex: 3 },
+                    { x: 830, y: 1180, width: '280px', name: "Ações Rápidas", contentModel: [{ text: currentLangStrings.flowchart_block_6, style: {} }], id: 'block-6', zIndex: 2 },
+                    { x: 830, y: 1360, width: '280px', name: "Salvar e Apresentar", contentModel: [{ text: currentLangStrings.flowchart_block_7, style: {} }], id: 'block-7', zIndex: 1 }
                 ],
                 arrows: [
                     { startBlock: 'block-0', endBlock: 'block-1', color: '#0d82e8', width: '3' },
@@ -1867,6 +1867,8 @@
                 });
                 deselectAll();
                 recordState();
+                // CHANGE: Refresh the block list after state has been updated from DOM.
+                updateBlocksList(); 
             }
             if (e.key === 'b' || e.key === 'B') {
                 e.preventDefault();
@@ -1925,6 +1927,11 @@
         function startEditing(block) {
             const contentEl = block.querySelector('.block-content');
             if (contentEl.querySelector('iframe, video, img')) return;
+            
+            // CHANGE: Ensure the block being edited is the only one selected.
+            if (selection.length !== 1 || selection[0] !== block) {
+                updateSelection(block, false);
+            }
 
             sidebar.classList.remove('hidden');
             isEditing = true;
@@ -2686,13 +2693,12 @@
 
             deselectAll();
             
+            gridX = state.viewport?.gridX || 0;
+            gridY = state.viewport?.gridY || 0;
+            
+            // CHANGE: Only set scale on the very first load of a session.
+            // For all other slide changes, the global `scale` variable will persist.
             if (isFirstLoad) {
-                gridX = 0;
-                gridY = 0;
-                scale = state.viewport?.scale || 0.9;
-            } else {
-                gridX = state.viewport?.gridX || 0;
-                gridY = state.viewport?.gridY || 0;
                 scale = state.viewport?.scale || 1;
             }
             updateGridTransform();
@@ -3403,16 +3409,17 @@
         }
 
         // --- Block Naming and Sidebar List ---
-        let draggedBlockId = null;
+        let draggedListItem = null;
 
         function updateBlocksList() {
             blocksList.innerHTML = '';
             const currentPage = pages[currentPageIndex];
             if (!currentPage || !currentPage.blocks) return;
 
-            const sortedBlocks = [...currentPage.blocks].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0));
+            // CHANGE: Render in the order they appear in the array, not sorted by z-index.
+            const blocksToRender = currentPage.blocks;
 
-            sortedBlocks.forEach(blockData => {
+            blocksToRender.forEach(blockData => {
                 const li = document.createElement('li');
                 li.textContent = blockData.name;
                 li.dataset.blockId = blockData.id;
@@ -3437,50 +3444,65 @@
                     }
                 });
 
-                li.addEventListener('dragstart', handleBlockDragStart);
-                li.addEventListener('dragend', handleBlockDragEnd);
+                li.addEventListener('dragstart', (e) => {
+                    draggedListItem = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                });
+                li.addEventListener('dragend', (e) => {
+                    draggedListItem.classList.remove('dragging');
+                    draggedListItem = null;
+                });
                 blocksList.appendChild(li);
             });
         }
         
-        blocksList.addEventListener('dragover', handleBlockDragOver);
-        blocksList.addEventListener('drop', handleBlockDrop);
-
-        function handleBlockDragStart(e) {
-            draggedBlockId = e.target.dataset.blockId;
-            e.target.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-        }
-
-        function handleBlockDragEnd(e) {
-            e.target.classList.remove('dragging');
-            draggedBlockId = null;
-        }
-
-        function handleBlockDragOver(e) {
+        // CHANGE: New drag and drop logic for the list.
+        blocksList.addEventListener('dragover', e => {
             e.preventDefault();
-        }
-
-        function handleBlockDrop(e) {
-            e.preventDefault();
-            if (!draggedBlockId) return;
-
-            const draggedBlock = document.getElementById(draggedBlockId);
-            if (!draggedBlock) return;
-
-            const highestZIndex = findHighestZIndex();
-            const newZIndex = highestZIndex + 1;
-
-            draggedBlock.style.zIndex = newZIndex;
-
-            const blockData = pages[currentPageIndex].blocks.find(b => b.id === draggedBlockId);
-            if (blockData) {
-                blockData.zIndex = newZIndex;
+            const afterElement = getDragAfterElement(blocksList, e.clientY);
+            if (draggedListItem) {
+                 if (afterElement == null) {
+                    blocksList.appendChild(draggedListItem);
+                } else {
+                    blocksList.insertBefore(draggedListItem, afterElement);
+                }
             }
+        });
 
+        blocksList.addEventListener('drop', e => {
+            e.preventDefault();
+            if(!draggedListItem) return;
+
+            const newOrderIds = [...blocksList.querySelectorAll('li')].map(li => li.dataset.blockId);
+            const currentPageData = pages[currentPageIndex];
+            
+            currentPageData.blocks.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+            
+            const totalBlocks = currentPageData.blocks.length;
+            currentPageData.blocks.forEach((blockData, index) => {
+                blockData.zIndex = totalBlocks - index;
+                const blockEl = document.getElementById(blockData.id);
+                if (blockEl) {
+                    blockEl.style.zIndex = blockData.zIndex;
+                }
+            });
+            
             recordState();
-            updateBlocksList();
+        });
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
+
 
         function findHighestZIndex() {
             const blocks = document.querySelectorAll('.block');
@@ -3671,4 +3693,3 @@
 </script>
 </body>
 </html>
-
