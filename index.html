@@ -655,26 +655,27 @@
         <div class="hint-line"><span data-translate-key="hint_pan">Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa</span></div>
         <div class="hint-line"><span data-translate-key="hint_zoom">Use o <kbd>Scroll</kbd> para dar zoom</span></div>
         <div class="hint-line"><span data-translate-key="hint_slides">Use <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide</span></div>
-        <div class="hint-line"><span data-translate-key="hint_sidebar">Use <kbd>G</kbd> Esconder/Mostrar Painel Lateral</span></div>
-        <div class="hint-line"><span data-translate-key="hint_coords"><kbd>N</kbd> Esconder/Mostrar Coordenadas</span></div>
+        <div class="hint-line"><span data-translate-key="hint_sidebar">Use <kbd>G</kbd> para esconder/mostrar painel lateral</span></div>
+        <div class="hint-line"><span data-translate-key="hint_coords"><kbd>N</kbd> para esconder/mostrar coordenadas</span></div>
         <hr>
         <div class="hint-category" data-translate-key="hint_actions_title">Ações e Atalhos:</div>
-        <div class="hint-line"><span data-translate-key="hint_add"><kbd>Shift</kbd> + <kbd>A</kbd> Adicionar conteúdo</span></div>
-        <div class="hint-line"><span data-translate-key="hint_duplicate"><kbd>Shift</kbd> + <kbd>D</kbd> Duplicar/Adicionar</span></div>
-        <div class="hint-line"><span data-translate-key="hint_add_slide"><kbd>Shift</kbd> + <kbd>+</kbd> Adicionar Slide</span></div>
-        <div class="hint-line"><span data-translate-key="hint_delete_slide"><kbd>Shift</kbd> + <kbd>-</kbd> Deletar Slide</span></div>
-        <div class="hint-line"><span data-translate-key="hint_smart_color"><kbd>B</kbd> Paleta de Cores Inteligente</span></div>
-        <div class="hint-line"><span data-translate-key="hint_parent_move"><kbd>P</kbd> Ativar/Desativar Movimento em Grupo</span></div>
-        <div class="hint-line"><span data-translate-key="hint_delete"><kbd>Delete</kbd> Apagar itens</span></div>
-        <div class="hint-line"><span data-translate-key="hint_undo"><kbd>Ctrl</kbd> + <kbd>Z</kbd> Desfazer</span></div>
-        <div class="hint-line"><span data-translate-key="hint_redo"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> Refazer</span></div>
+        <div class="hint-line"><span data-translate-key="hint_add"><kbd>Shift</kbd> + <kbd>A</kbd> para adicionar conteúdo</span></div>
+        <div class="hint-line"><span data-translate-key="hint_duplicate"><kbd>Shift</kbd> + <kbd>D</kbd> para duplicar/adicionar</span></div>
+        <div class="hint-line"><span data-translate-key="hint_rename_block"><kbd>F2</kbd> / <kbd>R</kbd> para renomear o bloco</span></div>
+        <div class="hint-line"><span data-translate-key="hint_add_slide"><kbd>Shift</kbd> + <kbd>+</kbd> para adicionar slide</span></div>
+        <div class="hint-line"><span data-translate-key="hint_delete_slide"><kbd>Shift</kbd> + <kbd>-</kbd> para deletar slide</span></div>
+        <div class="hint-line"><span data-translate-key="hint_smart_color"><kbd>B</kbd> para paleta de cores inteligente</span></div>
+        <div class="hint-line"><span data-translate-key="hint_parent_move"><kbd>P</kbd> para ativar/desativar movimento em grupo</span></div>
+        <div class="hint-line"><span data-translate-key="hint_delete"><kbd>Delete</kbd> para apagar itens</span></div>
+        <div class="hint-line"><span data-translate-key="hint_undo"><kbd>Ctrl</kbd> + <kbd>Z</kbd> para desfazer</span></div>
+        <div class="hint-line"><span data-translate-key="hint_redo"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> para refazer</span></div>
         <div class="hint-line"><span data-translate-key="hint_save"><kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar</span></div>
         <div class="hint-line"><span data-translate-key="hint_load"><kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar</span></div>
     </div>
 
     <div class="sidebar">
         <div class="sidebar-section">
-            <h4 data-translate-key="sidebar_blocks_list">Lista de Blocos</h4>
+            <h4 data-translate-key="sidebar_blocks_list">Guia do Mapa Mental</h4>
             <div id="blocks-list-container">
                 <ul id="blocks-list"></ul>
             </div>
@@ -694,10 +695,14 @@
                              <select id="family-select"></select>
                         </div>
                     </label>
+                    <label>
+                        <span data-translate-key="sidebar_show_in_list">Mostrar na Lista</span>
+                        <input type="checkbox" id="show-in-list-checkbox" checked>
+                    </label>
                     <label><span data-translate-key="sidebar_background">Fundo</span><div class="color-picker-wrapper" data-color-target="blockBg"></div></label>
                     <label><span data-translate-key="sidebar_border">Borda</span><div class="color-picker-wrapper" data-color-target="blockBorder"></div></label>
                 </div>
-                <div id="handle-controls" class="control-group hidden"><h5 data-translate-key="sidebar_handles">Alças</h5><label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span data-translate-key="sidebar_visible">Visível</span><input type="checkbox" id="handle-visible" checked></label></div>
+                <div id="handle-controls" class="control-group hidden"><h5 data-translate-key="sidebar_handles">Alças</h5><label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="handle"></div></label><label><span data-translate-key="sidebar_visible">Beiradas visíveis</span><input type="checkbox" id="handle-visible" checked></label></div>
                 <div id="text-controls" class="control-group hidden">
                     <h5 data-translate-key="sidebar_text">Texto</h5>
                     <div class="text-format-buttons">
@@ -814,35 +819,37 @@
             'pt': {
                 page_title: "Canvas Interativo - MentMap",
                 coords_nothing: "Nada selecionado",
-                coords_items: "itens selecionados",
+                coords_items: "Itens selecionados",
                 coords_arrow: "Seta selecionada",
                 hint_toggle: "Pressione <kbd>H</kbd> para mostrar/esconder os atalhos",
                 hint_nav_title: "Navegação e Visualização:",
                 hint_pan: "Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa",
                 hint_zoom: "Use o <kbd>Scroll</kbd> para dar zoom",
                 hint_slides: "Use <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide",
-                hint_sidebar: "Use <kbd>G</kbd> para Esconder/Mostrar Painel Lateral",
-                hint_coords: "<kbd>N</kbd> para Esconder/Mostrar Coordenadas",
+                hint_sidebar: "Use <kbd>G</kbd> para esconder/mostrar painel lateral",
+                hint_coords: "<kbd>N</kbd> para esconder/mostrar coordenadas",
                 hint_actions_title: "Ações e Atalhos:",
-                hint_add: "<kbd>Shift</kbd> + <kbd>A</kbd> para Adicionar conteúdo",
-                hint_duplicate: "<kbd>Shift</kbd> + <kbd>D</kbd> para Duplicar/Adicionar",
-                hint_add_slide: "<kbd>Shift</kbd> + <kbd>+</kbd> para Adicionar Slide",
-                hint_delete_slide: "<kbd>Shift</kbd> + <kbd>-</kbd> para Deletar Slide",
-                hint_smart_color: "<kbd>B</kbd> para Paleta de Cores Inteligente",
-                hint_parent_move: "<kbd>P</kbd> Ativar/Desativar Movimento em Grupo",
-                hint_delete: "<kbd>Delete</kbd> para Apagar itens",
-                hint_undo: "<kbd>Ctrl</kbd> + <kbd>Z</kbd> para Desfazer",
-                hint_redo: "<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> para Refazer",
+                hint_add: "<kbd>Shift</kbd> + <kbd>A</kbd> para adicionar conteúdo",
+                hint_duplicate: "<kbd>Shift</kbd> + <kbd>D</kbd> para duplicar/adicionar",
+                hint_rename_block: "<kbd>F2</kbd> / <kbd>R</kbd> para renomear o bloco",
+                hint_add_slide: "<kbd>Shift</kbd> + <kbd>+</kbd> para adicionar slide",
+                hint_delete_slide: "<kbd>Shift</kbd> + <kbd>-</kbd> para deletar slide",
+                hint_smart_color: "<kbd>B</kbd> para paleta de cores inteligente",
+                hint_parent_move: "<kbd>P</kbd> para ativar/desativar movimento em grupo",
+                hint_delete: "<kbd>Delete</kbd> para apagar itens",
+                hint_undo: "<kbd>Ctrl</kbd> + <kbd>Z</kbd> para desfazer",
+                hint_redo: "<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> para refazer",
                 hint_save: "<kbd>Ctrl</kbd> + <kbd>S</kbd> para salvar",
                 hint_load: "<kbd>Ctrl</kbd> + <kbd>L</kbd> para carregar",
                 sidebar_customize: "Customizar",
-                sidebar_blocks_list: "Lista de Blocos",
+                sidebar_blocks_list: "Guia do Mapa Mental",
                 sidebar_block: "Bloco",
                 sidebar_background: "Fundo",
                 sidebar_border: "Borda",
                 sidebar_handles: "Alças",
                 sidebar_color: "Cor",
-                sidebar_visible: "Visível",
+                sidebar_visible: "Beiradas visíveis",
+                sidebar_show_in_list: "Mostrar na Lista",
                 sidebar_text: "Texto",
                 sidebar_size: "Tamanho (px)",
                 sidebar_font: "Fonte",
@@ -862,11 +869,11 @@
                 btn_snap: "Encaixe",
                 btn_parent_move: "Grupo",
                 menu_move: "Mover",
-                menu_move_to: "Para >",
+                menu_move_to: "Mover Para >",
                 menu_move_prev: "Slide anterior",
                 menu_move_next: "Próximo slide",
                 menu_move_specific: "Slide nº:",
-                menu_rename: "Renomear",
+                menu_rename: "Renomear (F2 / R)",
                 menu_add: "Adicionar >",
                 menu_add_text: "Bloco de Texto",
                 menu_from_file: "Do Arquivo >",
@@ -883,7 +890,7 @@
                 toast_parent_move_off: "Movimento em Grupo Desativado",
                 toast_page_added: "Slide {page} adicionado",
                 toast_page_deleted: "Slide {page} deletado",
-                toast_cant_delete_last: "Não é possível deletar o último slide.",
+                toast_cant_delete_last: "Não é possível apagar o último slide.",
                 toast_pdf_importing: "Importando {name}... Isso pode levar um momento.",
                 toast_pdf_success: "Importado com sucesso {numPages} slides.",
                 toast_pdf_error: "Falha ao importar PDF. Veja o console para detalhes.",
@@ -891,6 +898,8 @@
                 toast_file_error: "Falha ao carregar arquivo. Pode estar corrompido.",
                 toast_media_error: "Não foi possível carregar a imagem ou vídeo da URL.",
                 toast_block_renamed: "Bloco renomeado para '{name}'.",
+                toast_block_hidden_in_list: "Bloco oculto da lista.",
+                toast_block_shown_in_list: "Bloco agora visível na lista.",
                 toast_blocks_moved: "{count} bloco(s) movido(s) para o Slide {slide}.",
                 toast_invalid_slide: "Número do slide inválido!",
                 prompt_media_url: "Insira a URL da Imagem ou Vídeo (YouTube, Vimeo, etc.):",
@@ -898,23 +907,14 @@
                 prompt_desmos_url: "Insira a URL do gráfico Desmos:",
                 prompt_geogebra_url: "Insira a URL do applet GeoGebra (ex: de compartilhar > incorporar):",
                 prompt_phet_url: "Insira a URL da simulação PhET Colorado:",
-                flowchart_block_0: "Bem-vindo ao MentMap! 👋\nSiga este fluxograma para aprender o básico.",
-                flowchart_block_1: "1. NAVEGAÇÃO\nSegure SHIFT e arraste para mover o canvas. Use o Scroll para dar zoom.",
-                flowchart_block_2: "2. ADICIONAR CONTEÚDO\nClique com o botão direito para adicionar blocos de texto, imagens, etc.",
-                flowchart_block_3: "3. EDITAR TEXTO\nClique uma vez no texto para editar. Use o painel (letra G) para formatar.",
-                flowchart_block_4: "4. CONECTAR IDEIAS\nAtive o 'Modo Seta' ou segure CTRL e arraste entre os blocos.",
-                flowchart_block_5: "5. CUSTOMIZAR\nSelecione um item e use o painel lateral (letra G) para mudar cores e fontes.",
-                flowchart_block_6: "6. AÇÕES RÁPIDAS\nUse atalhos como Shift+D (duplicar), Delete (apagar) e Ctrl+Z (desfazer).",
-                flowchart_block_7: "7. SALVAR E APRESENTAR\nUse os 'Slides' para apresentar e Ctrl+S para salvar seu trabalho."
             }
-            // As outras linguagens foram omitidas por brevidade, mas deveriam ser atualizadas também.
         };
         let currentLangStrings = translations['pt'];
 
         function setLanguage(lang) {
             const langCode = lang.split('-')[0];
-            const supportedLangs = ['pt', 'en', 'ja', 'zh'];
-            const finalLang = supportedLangs.includes(langCode) ? langCode : 'en';
+            const supportedLangs = ['pt'];
+            const finalLang = supportedLangs.includes(langCode) ? langCode : 'pt';
 
             currentLangStrings = translations[finalLang] || translations['pt'];
             document.documentElement.lang = finalLang;
@@ -961,6 +961,7 @@
         const renameBlockForm = document.getElementById('rename-block-form');
         const renameBlockInput = document.getElementById('rename-block-input');
         const renameBlockBtn = document.getElementById('rename-block-btn');
+        const showInListCheckbox = document.getElementById('show-in-list-checkbox');
 
     
         let isDragging = false, isPanning = false, isEditing = false, isArrowMode = false, isDrawingArrow = false;
@@ -1008,35 +1009,19 @@
         function initialize() {
             populateFontSizeSelector();
             const initialPage = {
-                blocks: [
-                    { x: 830, y: 100, width: '280px', name: "Boas-vindas", contentModel: [{ text: currentLangStrings.flowchart_block_0, style: {} }], id: 'block-0', zIndex: 8 },
-                    { x: 830, y: 280, width: '280px', name: "Navegação", contentModel: [{ text: currentLangStrings.flowchart_block_1, style: {} }], id: 'block-1', zIndex: 7 },
-                    { x: 830, y: 460, width: '280px', name: "Adicionar Conteúdo", contentModel: [{ text: currentLangStrings.flowchart_block_2, style: {} }], id: 'block-2', zIndex: 6 },
-                    { x: 830, y: 640, width: '280px', name: "Editar Texto", contentModel: [{ text: currentLangStrings.flowchart_block_3, style: {} }], id: 'block-3', zIndex: 5 },
-                    { x: 830, y: 820, width: '280px', name: "Conectar Ideias", contentModel: [{ text: currentLangStrings.flowchart_block_4, style: {} }], id: 'block-4', zIndex: 4 },
-                    { x: 830, y: 1000, width: '280px', name: "Customizar", contentModel: [{ text: currentLangStrings.flowchart_block_5, style: {} }], id: 'block-5', zIndex: 3 },
-                    { x: 830, y: 1180, width: '280px', name: "Ações Rápidas", contentModel: [{ text: currentLangStrings.flowchart_block_6, style: {} }], id: 'block-6', zIndex: 2 },
-                    { x: 830, y: 1360, width: '280px', name: "Salvar e Apresentar", contentModel: [{ text: currentLangStrings.flowchart_block_7, style: {} }], id: 'block-7', zIndex: 1 }
-                ],
-                arrows: [
-                    { startBlock: 'block-0', endBlock: 'block-1', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-1', endBlock: 'block-2', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-2', endBlock: 'block-3', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-3', endBlock: 'block-4', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-4', endBlock: 'block-5', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-5', endBlock: 'block-6', color: '#0d82e8', width: '3' },
-                    { startBlock: 'block-6', endBlock: 'block-7', color: '#0d82e8', width: '3' }
-                ],
-                viewport: { gridX: 0, gridY: 0, scale: 0.8 }, // Adjusted zoom to see more of the flowchart
+                blocks: [],
+                arrows: [],
+                viewport: { gridX: 0, gridY: 0, scale: 0.7 },
                 styles: {},
                 families: []
             };
-            blockCounter = 8;
+            blockCounter++;
             pages = [initialPage];
             currentPageIndex = 0;
             loadPage(0, true);
             initializeColorPickers();
             recordState(); 
+            updateCoordinates();
         }
         
         function populateFontSizeSelector() {
@@ -1055,7 +1040,7 @@
         addContentBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
             const rect = addContentBtn.getBoundingClientRect();
-            showContextMenu(rect.left - contextMenu.offsetWidth - 10, rect.top, false, 'add');
+            showContextMenu(rect.left - 5, rect.top, false, 'add');
         });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         toggleSnapBtn.addEventListener('click', () => {
@@ -1107,6 +1092,7 @@
         });
         familySelect.addEventListener('change', assignFamilyToSelection);
         toggleParentMoveBtn.addEventListener('click', toggleParentMove);
+        showInListCheckbox.addEventListener('change', toggleShowInList);
 
 
         document.addEventListener('selectionchange', () => {
@@ -1218,6 +1204,7 @@
                 block.dataset.familyId = config.familyId;
             }
             
+            block.dataset.showInList = config.showInList !== false;
             block.contentModel = config.contentModel || [];
 
             const nameEl = document.createElement('div');
@@ -1228,7 +1215,6 @@
             contentEl.className = 'block-content';
             block.appendChild(contentEl);
 
-            // Armazenar o nome no elemento para fácil acesso
             block.dataset.name = config.name || `Bloco ${block.id.split('-')[1]}`;
             updateBlockNameDisplay(block);
 
@@ -1239,7 +1225,6 @@
             
             renderContent(block.contentModel, contentEl);
 
-            // Adiciona a classe 'has-iframe' se necessário
             if (contentEl.querySelector('iframe')) {
                 contentEl.classList.add('has-iframe');
             }
@@ -1289,7 +1274,8 @@
                 y: coords.y,
                 contentModel: options.contentModel || [{ text: 'Novo Bloco.', style: {} }],
                 name: `Bloco ${blockCounter}`,
-                zIndex: findHighestZIndex() + 1
+                zIndex: findHighestZIndex() + 1,
+                showInList: false
             };
             Object.assign(config, options);
 
@@ -1315,7 +1301,6 @@
                 return;
             }
             
-            // Ignorar clique direito para não interferir com o menu de contexto do bloco
             if (e.button === 2) return;
 
             e.stopPropagation();
@@ -1343,7 +1328,7 @@
                     top: block.offsetTop,
                 };
 
-                resizeInitialStates = []; // For other family members
+                resizeInitialStates = [];
                 if (isParentMoveEnabled && currentBlock.dataset.familyId) {
                     const familyId = currentBlock.dataset.familyId;
                     pages.forEach((page, pageIndex) => {
@@ -1351,26 +1336,16 @@
                             if (blockData.familyId === familyId) {
                                 const el = pageIndex === currentPageIndex ? document.getElementById(blockData.id) : null;
                                 resizeInitialStates.push({
-                                    el: el,
-                                    id: blockData.id,
-                                    pageIndex: pageIndex,
-                                    x: blockData.x,
-                                    y: blockData.y,
-                                    width: parseFloat(blockData.width),
-                                    height: parseFloat(blockData.height) || (el ? el.offsetHeight : 100)
+                                    el: el, id: blockData.id, pageIndex: pageIndex, x: blockData.x, y: blockData.y,
+                                    width: parseFloat(blockData.width), height: parseFloat(blockData.height) || (el ? el.offsetHeight : 100)
                                 });
                             }
                         });
                     });
                 } else {
                     resizeInitialStates.push({
-                        el: currentBlock,
-                        id: currentBlock.id,
-                        pageIndex: currentPageIndex,
-                        x: currentBlock.offsetLeft,
-                        y: currentBlock.offsetTop,
-                        width: currentBlock.offsetWidth,
-                        height: currentBlock.offsetHeight
+                        el: currentBlock, id: currentBlock.id, pageIndex: currentPageIndex, x: currentBlock.offsetLeft,
+                        y: currentBlock.offsetTop, width: currentBlock.offsetWidth, height: currentBlock.offsetHeight
                     });
                 }
                 return;
@@ -1407,16 +1382,9 @@
                             if (blockData.familyId === familyId) {
                                 const el = pageIndex === currentPageIndex ? document.getElementById(blockData.id) : null;
                                 dragInitialPositions.push({
-                                    el: el,
-                                    id: blockData.id,
-                                    pageIndex: pageIndex,
-                                    x: blockData.x, // Store original position from data model
-                                    y: blockData.y
+                                    el: el, id: blockData.id, pageIndex: pageIndex, x: blockData.x, y: blockData.y
                                 });
-                                if (el) {
-                                   el.style.transition = 'none';
-                                   el.classList.add('dragging');
-                                }
+                                if (el) { el.style.transition = 'none'; el.classList.add('dragging'); }
                             }
                         });
                     });
@@ -1426,11 +1394,7 @@
                     }
                     const blocksToDrag = selection.filter(item => item.classList.contains('block'));
                     dragInitialPositions = blocksToDrag.map(item => ({
-                        el: item,
-                        id: item.id,
-                        pageIndex: currentPageIndex,
-                        x: parseInt(item.style.left),
-                        y: parseInt(item.style.top)
+                        el: item, id: item.id, pageIndex: currentPageIndex, x: parseInt(item.style.left), y: parseInt(item.style.top)
                     }));
                     dragInitialPositions.forEach(pos => {
                         pos.el.style.transition = 'none';
@@ -1450,24 +1414,20 @@
         }
 
         function handleMouseUp(e) {
-            // Handle selection/editing on click (no movement)
             if (!mouseMoved) {
-                if (currentBlock) { // Clicked on a block
+                if (currentBlock) {
                     if (e.shiftKey) {
                         updateSelection(currentBlock, true);
                     } else {
-                        // If the click was on the content and it's not an embed, edit it.
                         if (mouseDownTarget && mouseDownTarget.closest('.block-content') && !currentBlock.querySelector('iframe, video, img')) {
                             startEditing(currentBlock);
                         } else {
-                            // If it's not already the single selected item, select it.
                             if (!(selection.length === 1 && selection[0] === currentBlock)) {
                                updateSelection(currentBlock, false);
                             }
                         }
                     }
                 } else if (isMarqueeSelecting && !marqueeHasMoved) {
-                    // This was a simple click on the grid, not a drag for marquee
                     deselectAll();
                 }
             }
@@ -1505,19 +1465,13 @@
                 marqueeBox = null;
             }
 
-            isDragging = false;
-            isResizing = false;
-            isPanning = false;
-            isDrawingArrow = false;
-            arrowStartBlock = null;
-            currentBlock = null;
-            mouseDownTarget = null;
+            isDragging = false; isResizing = false; isPanning = false; isDrawingArrow = false;
+            arrowStartBlock = null; currentBlock = null; mouseDownTarget = null;
 
             if(wasDraggingOrResizing) {
                 recordState();
             }
 
-            // Limpa a classe de qualquer bloco que a tenha, garantindo a interatividade do iframe após o arraste.
             document.querySelectorAll('.is-held-down').forEach(b => b.classList.remove('is-held-down'));
         }
 
@@ -1608,7 +1562,7 @@
                  if (isBlockMenu) {
                     menuHTML += `
                         <li class="has-submenu">
-                            <span data-translate-key="menu_move_to">Mover para ></span>
+                            <span data-translate-key="menu_move_to">Mover Para ></span>
                             <ul class="submenu">
                                 <li data-action="move-prev-slide" data-translate-key="menu_move_prev">Slide anterior</li>
                                 <li data-action="move-next-slide" data-translate-key="menu_move_next">Próximo slide</li>
@@ -1621,7 +1575,7 @@
                                 </li>
                             </ul>
                         </li>
-                        <li data-action="rename-block" data-translate-key="menu_rename">Renomear</li>
+                        <li data-action="rename-block" data-translate-key="menu_rename">Renomear (F2 / R)</li>
                         <li class="separator"></li>
                     `;
                 }
@@ -1640,9 +1594,23 @@
             contextMenu.innerHTML = menuHTML;
             setLanguage(document.documentElement.lang);
 
-            contextMenu.style.left = `${x}px`;
-            contextMenu.style.top = `${y}px`;
+            contextMenu.style.visibility = 'hidden';
             contextMenu.style.display = 'block';
+            
+            const menuRect = contextMenu.getBoundingClientRect();
+            let finalX = x + 5;
+            let finalY = y + 5;
+
+            if (finalX + menuRect.width > window.innerWidth) {
+                finalX = x - menuRect.width - 5;
+            }
+             if (finalY + menuRect.height > window.innerHeight) {
+                finalY = y - menuRect.height - 5;
+            }
+
+            contextMenu.style.left = `${Math.max(0, finalX)}px`;
+            contextMenu.style.top = `${Math.max(0, finalY)}px`;
+            contextMenu.style.visibility = 'visible';
 
             // Adicionar listeners dinamicamente
             contextMenu.querySelectorAll('[data-action]').forEach(item => {
@@ -1910,7 +1878,7 @@
                 recordState();
                 updateBlocksList(); 
             }
-            if (e.key === 'F2' || e.key === 'r') {
+            if (e.key === 'F2' || e.key.toLowerCase() === 'r') {
                 e.preventDefault();
                 startRenamingBlock();
             }
@@ -2473,6 +2441,7 @@
                 document.querySelector('[data-color-target="blockBorder"]').style.background = computed.borderColor;
                 document.querySelector('[data-color-target="handle"]').style.background = computed.getPropertyValue('--handle-color').trim() || '#808080';
                 
+                showInListCheckbox.checked = lastSelectedBlock.dataset.showInList !== 'false';
                 nonColorInputs.handleVisible.checked = computed.getPropertyValue('--handle-display').trim() !== 'none';
                 
                 updateFamilySelectDropdown();
@@ -2581,14 +2550,12 @@
                     
                     const targetType = wrapper.dataset.colorTarget;
                     let initialColor = wrapper.style.backgroundColor || 'rgba(255, 255, 255, 1)';
+                    const rect = wrapper.getBoundingClientRect();
 
-                    colorPicker.show(initialColor, (newColor) => {
+                    colorPicker.show(initialColor, rect.left, rect.top, (newColor) => {
                         handleColorConfirm(targetType, newColor);
                         recordState();
                     });
-                    
-                    const rect = wrapper.getBoundingClientRect();
-                    colorPicker.setPosition(rect.left - 250, rect.top);
                 });
             });
         }
@@ -2630,11 +2597,10 @@
                 initialColor = lastSelectedItem.querySelector('.arrow-line').getAttribute('stroke');
             }
             
-            colorPicker.show(initialColor, (newColor) => {
+            colorPicker.show(initialColor, lastMouseX, lastMouseY, (newColor) => {
                 handleColorConfirm(targetType, newColor);
                 recordState();
             });
-            colorPicker.setPosition(lastMouseX, lastMouseY);
         }
 
         function recordState() {
@@ -2696,7 +2662,8 @@
                     zIndex: parseInt(block.style.zIndex) || 0,
                     handleColor: block.style.getPropertyValue('--handle-color'),
                     handleDisplay: block.style.getPropertyValue('--handle-display'),
-                    familyId: block.dataset.familyId
+                    familyId: block.dataset.familyId,
+                    showInList: block.dataset.showInList !== 'false'
                 })),
                 arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(arrowGroup => {
                     const arrowLine = arrowGroup.querySelector('.arrow-line');
@@ -2899,7 +2866,8 @@
                             name: `Slide ${i} - ${familyName}`,
                             contentModel: [{ text: imageHtml, style: {}, isHTML: true }],
                             id: `block-slide-${importStartIndex + i - 1}-${blockCounter++}`,
-                            familyId: newFamily.id
+                            familyId: newFamily.id,
+                            showInList: true
                         }],
                         arrows: [],
                         viewport: { gridX: 0, gridY: 0, scale: 1 },
@@ -2925,7 +2893,7 @@
         function saveAllPages() {
             saveCurrentPageState();
             const state = {
-                formatVersion: "3.2", // Updated version for block names
+                formatVersion: "3.3",
                 pages: pages,
                 families: families,
                 blockCounter: blockCounter
@@ -2950,12 +2918,11 @@
                         families = [];
                         blockCounter = 1;
                     }
-                    // Ensure blocks have names for backward compatibility
+                    // Backward compatibility
                     pages.forEach(page => {
                         page.blocks.forEach(block => {
-                            if (!block.name) {
-                                block.name = `Bloco ${block.id.split('-')[1]}`;
-                            }
+                            block.name = block.name || `Bloco ${block.id.split('-')[1]}`;
+                            block.showInList = block.showInList ?? true; // Default to true if not present
                         })
                     });
                     loadPage(0, true);
@@ -2994,7 +2961,8 @@
                     zIndex: newZIndex,
                     handleColor: block.style.getPropertyValue('--handle-color'),
                     handleDisplay: block.style.getPropertyValue('--handle-display'),
-                    familyId: block.dataset.familyId
+                    familyId: block.dataset.familyId,
+                    showInList: block.dataset.showInList !== 'false'
                 };
                 const newBlock = createBlock(config);
                 idMap.set(block.id, newBlock.id);
@@ -3218,7 +3186,7 @@
             }
 
             return {
-                show(initialColor, onConfirm) {
+                show(initialColor, x, y, onConfirm) {
                     onConfirmCallback = onConfirm;
                     const {r, g, b, a} = parseRgba(initialColor);
                     const {h, s, v} = rgbToHsv(r, g, b);
@@ -3226,14 +3194,24 @@
                     hueSlider.value = h;
                     opacitySlider.value = a;
                     updateUI();
+                    
+                    const pickerWidth = picker.offsetWidth;
+                    const pickerHeight = picker.offsetHeight;
+                    let finalX = x - pickerWidth - 10;
+                    let finalY = y;
+
+                    if (finalX < 0) { finalX = x + 10; }
+                    if (finalY + pickerHeight > window.innerHeight) {
+                        finalY = window.innerHeight - pickerHeight - 10;
+                    }
+
+                    picker.style.left = `${Math.max(0, finalX)}px`;
+                    picker.style.top = `${Math.max(0, finalY)}px`;
+                    
                     picker.classList.remove('hidden');
                 },
                 hide() { picker.classList.add('hidden'); },
-                isHidden() { return picker.classList.contains('hidden'); },
-                setPosition(x, y) {
-                    picker.style.left = `${Math.max(0, Math.min(x, window.innerWidth - picker.offsetWidth))}px`;
-                    picker.style.top = `${Math.max(0, Math.min(y, window.innerHeight - picker.offsetHeight))}px`;
-                }
+                isHidden() { return picker.classList.contains('hidden'); }
             };
         }
 
@@ -3459,7 +3437,7 @@
             const currentPage = pages[currentPageIndex];
             if (!currentPage || !currentPage.blocks) return;
 
-            const blocksToRender = currentPage.blocks;
+            const blocksToRender = currentPage.blocks.filter(b => b.showInList);
 
             blocksToRender.forEach(blockData => {
                 const li = document.createElement('li');
@@ -3480,7 +3458,7 @@
                         
                         scale = targetScale;
                         gridX = -blockEl.offsetLeft + (containerRect.width / 2) - (blockRect.width / scale / 2);
-                        gridY = -blockEl.offsetTop + (containerRect.height / 2) - (blockRect.height / scale / 2);
+                        gridY = -blockEl.offsetTop + (containerRect.height / scale / 2);
 
                         updateGridTransform();
                     }
@@ -3517,7 +3495,13 @@
             const newOrderIds = [...blocksList.querySelectorAll('li')].map(li => li.dataset.blockId);
             const currentPageData = pages[currentPageIndex];
             
-            currentPageData.blocks.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+            // Reorder only the visible blocks, keep hidden blocks at the end
+            const visibleBlocks = currentPageData.blocks.filter(b => b.showInList);
+            const hiddenBlocks = currentPageData.blocks.filter(b => !b.showInList);
+
+            visibleBlocks.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+
+            currentPageData.blocks = [...visibleBlocks, ...hiddenBlocks];
             
             const totalBlocks = currentPageData.blocks.length;
             currentPageData.blocks.forEach((blockData, index) => {
@@ -3597,6 +3581,23 @@
                 showToast(currentLangStrings.toast_block_renamed.replace('{name}', newName));
             }
             renameBlockForm.classList.add('hidden');
+        }
+
+        function toggleShowInList(e) {
+            const show = e.target.checked;
+            const blockIds = new Set(selection.filter(i => i.classList.contains('block')).map(b => b.id));
+            
+            pages[currentPageIndex].blocks.forEach(blockData => {
+                if (blockIds.has(blockData.id)) {
+                    blockData.showInList = show;
+                    const blockEl = document.getElementById(blockData.id);
+                    if (blockEl) blockEl.dataset.showInList = show;
+                }
+            });
+
+            showToast(show ? currentLangStrings.toast_block_shown_in_list : currentLangStrings.toast_block_hidden_in_list);
+            updateBlocksList();
+            recordState();
         }
 
         // --- Move Blocks Functionality ---
@@ -3734,4 +3735,6 @@
 </script>
 </body>
 </html>
+
+}
 
