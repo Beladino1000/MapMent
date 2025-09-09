@@ -194,7 +194,9 @@
         }
 
         .block.dragging iframe,
-        .block.dragging video {
+        .block.dragging video,
+        .block.is-held-down iframe,
+        .block.is-held-down video {
             pointer-events: none;
         }
         
@@ -276,7 +278,13 @@
             opacity: 0.95;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             border: 1px solid var(--border-color);
+            transition: right 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
+
+        body.sidebar-hidden .shortcut-hint {
+            right: 15px;
+        }
+
         .shortcut-hint kbd {
             background: rgba(255,255,255,0.15);
             padding: 2px 6px;
@@ -553,7 +561,7 @@
             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
             background-repeat: no-repeat; background-position: right 8px top 50%; background-size: .65em auto;
         }
-        #family-select-wrapper {
+        .select-wrapper {
              width: 120px;
         }
 
@@ -682,7 +690,7 @@
                     <h5 data-translate-key="sidebar_block">Bloco</h5>
                     <label>
                         <span data-translate-key="sidebar_family">Família</span>
-                        <div id="family-select-wrapper">
+                        <div class="select-wrapper">
                              <select id="family-select"></select>
                         </div>
                     </label>
@@ -697,7 +705,26 @@
                         <button id="italic-btn" class="format-btn"><i>I</i></button>
                         <button id="underline-btn" class="format-btn"><u>U</u></button>
                     </div>
-                    <label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="text"></div></label><label><span data-translate-key="sidebar_size">Tamanho (px)</span><select id="text-size"></select></label><label><span data-translate-key="sidebar_font">Fonte</span><select id="text-font"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" data-translate-key="font_default">Padrão</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="Verdana, sans-serif">Verdana</option><option value="Times New Roman, serif">Times New Roman</option></select></label>
+                    <label><span data-translate-key="sidebar_color">Cor</span><div class="color-picker-wrapper" data-color-target="text"></div></label>
+                    <label>
+                        <span data-translate-key="sidebar_size">Tamanho (px)</span>
+                        <div class="select-wrapper">
+                            <select id="text-size"></select>
+                        </div>
+                    </label>
+                    <label>
+                        <span data-translate-key="sidebar_font">Fonte</span>
+                        <div class="select-wrapper">
+                            <select id="text-font">
+                                <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" data-translate-key="font_default">Padrão</option>
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="Courier New, monospace">Courier New</option>
+                                <option value="Verdana, sans-serif">Verdana</option>
+                                <option value="Times New Roman, serif">Times New Roman</option>
+                            </select>
+                        </div>
+                    </label>
                 </div>
                 <div id="link-controls" class="control-group hidden">
                     <h5 data-translate-key="sidebar_embed">Link Incorporado</h5>
@@ -1028,7 +1055,7 @@
         addContentBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
             const rect = addContentBtn.getBoundingClientRect();
-            showContextMenu(rect.left - contextMenu.offsetWidth - 10, rect.top, false);
+            showContextMenu(rect.left - contextMenu.offsetWidth - 10, rect.top, false, 'add');
         });
         toggleArrowModeBtn.addEventListener('click', toggleArrowMode);
         toggleSnapBtn.addEventListener('click', () => {
@@ -1279,9 +1306,11 @@
                 sel.addRange(range);
             }
             recordState();
+            updateBlocksList();
         }
 
         function handleBlockMouseDown(e, block) {
+            block.classList.add('is-held-down');
             if (e.target.tagName === 'IFRAME' || e.target.tagName === 'VIDEO' || e.target.tagName === 'IMG') {
                 return;
             }
@@ -1487,6 +1516,9 @@
             if(wasDraggingOrResizing) {
                 recordState();
             }
+
+            // Limpa a classe de qualquer bloco que a tenha, garantindo a interatividade do iframe após o arraste.
+            document.querySelectorAll('.is-held-down').forEach(b => b.classList.remove('is-held-down'));
         }
 
         function handleGlobalMouseDown(e) {
@@ -1539,61 +1571,70 @@
             showContextMenu(e.clientX, e.clientY, false);
         }
 
-        function showContextMenu(x, y, isBlockMenu) {
+        function getAddSubMenuHTML() {
+            return `
+                <li class="menu-header" data-translate-key="menu_add">Adicionar</li>
+                <li data-action="add-text" data-translate-key="menu_add_text">Bloco de Texto</li>
+                <li class="has-submenu">
+                    <span data-translate-key="menu_from_file">Do Arquivo ></span>
+                    <ul class="submenu">
+                        <li data-action="add-media-file" data-translate-key="menu_add_media">Imagem / Vídeo</li>
+                        <li data-action="import-pdf-file" data-translate-key="menu_add_pdf">PDF como Slides</li>
+                    </ul>
+                </li>
+                <li class="has-submenu">
+                    <span data-translate-key="menu_from_link">Do Link ></span>
+                    <ul class="submenu">
+                        <li data-action="add-media-link" data-translate-key="menu_add_media">Imagem / Vídeo</li>
+                        <li data-action="add-pdf-link" data-translate-key="menu_add_pdf">PDF como Slides</li>
+                        <li data-action="add-desmos-link">Desmos</li>
+                        <li data-action="add-geogebra-link">GeoGebra</li>
+                        <li data-action="add-phet-link" data-translate-key="menu_add_phet">PhET Colorado</li>
+                    </ul>
+                </li>
+            `;
+        }
+
+
+        function showContextMenu(x, y, isBlockMenu, contentType = 'full') {
             contextMenuX = x;
             contextMenuY = y;
 
             let menuHTML = '<ul>';
 
-            if (isBlockMenu) {
-                 // Menu principal para blocos
+            if (contentType === 'add') {
+                menuHTML += getAddSubMenuHTML();
+            } else {
+                 if (isBlockMenu) {
+                    menuHTML += `
+                        <li class="has-submenu">
+                            <span data-translate-key="menu_move_to">Mover para ></span>
+                            <ul class="submenu">
+                                <li data-action="move-prev-slide" data-translate-key="menu_move_prev">Slide anterior</li>
+                                <li data-action="move-next-slide" data-translate-key="menu_move_next">Próximo slide</li>
+                                <li>
+                                    <div class="submenu-input-group">
+                                        <span data-translate-key="menu_move_specific">Slide nº:</span>
+                                        <input type="number" id="move-slide-input" min="1" />
+                                        <button id="move-slide-confirm">✓</button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                        <li data-action="rename-block" data-translate-key="menu_rename">Renomear</li>
+                        <li class="separator"></li>
+                    `;
+                }
+
                 menuHTML += `
                     <li class="has-submenu">
-                        <span data-translate-key="menu_move_to">Para ></span>
+                        <span data-translate-key="menu_add">Adicionar ></span>
                         <ul class="submenu">
-                            <li data-action="move-prev-slide" data-translate-key="menu_move_prev">Slide anterior</li>
-                            <li data-action="move-next-slide" data-translate-key="menu_move_next">Próximo slide</li>
-                            <li>
-                                <div class="submenu-input-group">
-                                    <span data-translate-key="menu_move_specific">Slide nº:</span>
-                                    <input type="number" id="move-slide-input" min="1" />
-                                    <button id="move-slide-confirm">✓</button>
-                                </div>
-                            </li>
+                            ${getAddSubMenuHTML()}
                         </ul>
                     </li>
-                    <li data-action="rename-block" data-translate-key="menu_rename">Renomear</li>
-                    <li class="separator"></li>
                 `;
             }
-
-            // Submenu "Adicionar"
-            menuHTML += `
-                <li class="has-submenu">
-                    <span data-translate-key="menu_add">Adicionar ></span>
-                    <ul class="submenu">
-                        <li class="menu-header" data-translate-key="menu_add">Adicionar</li>
-                        <li data-action="add-text" data-translate-key="menu_add_text">Bloco de Texto</li>
-                        <li class="has-submenu">
-                            <span data-translate-key="menu_from_file">Do Arquivo ></span>
-                            <ul class="submenu">
-                                <li data-action="add-media-file" data-translate-key="menu_add_media">Imagem / Vídeo</li>
-                                <li data-action="import-pdf-file" data-translate-key="menu_add_pdf">PDF como Slides</li>
-                            </ul>
-                        </li>
-                        <li class="has-submenu">
-                            <span data-translate-key="menu_from_link">Do Link ></span>
-                            <ul class="submenu">
-                                <li data-action="add-media-link" data-translate-key="menu_add_media">Imagem / Vídeo</li>
-                                <li data-action="add-pdf-link" data-translate-key="menu_add_pdf">PDF como Slides</li>
-                                <li data-action="add-desmos-link">Desmos</li>
-                                <li data-action="add-geogebra-link">GeoGebra</li>
-                                <li data-action="add-phet-link" data-translate-key="menu_add_phet">PhET Colorado</li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-            `;
 
             menuHTML += '</ul>';
             contextMenu.innerHTML = menuHTML;
@@ -1867,8 +1908,11 @@
                 });
                 deselectAll();
                 recordState();
-                // CHANGE: Refresh the block list after state has been updated from DOM.
                 updateBlocksList(); 
+            }
+            if (e.key === 'F2' || e.key === 'r') {
+                e.preventDefault();
+                startRenamingBlock();
             }
             if (e.key === 'b' || e.key === 'B') {
                 e.preventDefault();
@@ -1877,6 +1921,7 @@
             if(e.key === 'g' || e.key === 'G') {
                 e.preventDefault();
                 sidebar.classList.toggle('hidden');
+                document.body.classList.toggle('sidebar-hidden');
             }
             if(e.key === 'n' || e.key === 'N') {
                 e.preventDefault();
@@ -1901,7 +1946,7 @@
             }
             if (e.shiftKey && (e.key === 'a' || e.key === 'A')) {
                 e.preventDefault();
-                showContextMenu(lastMouseX, lastMouseY, false);
+                showContextMenu(lastMouseX, lastMouseY, false, 'add');
             }
             if (e.ctrlKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); saveAllPages(); }
             if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); fileLoader.click(); }
@@ -1928,12 +1973,12 @@
             const contentEl = block.querySelector('.block-content');
             if (contentEl.querySelector('iframe, video, img')) return;
             
-            // CHANGE: Ensure the block being edited is the only one selected.
             if (selection.length !== 1 || selection[0] !== block) {
                 updateSelection(block, false);
             }
 
             sidebar.classList.remove('hidden');
+            document.body.classList.remove('sidebar-hidden');
             isEditing = true;
             activeEditingElement = contentEl;
             activeContentModel = JSON.parse(JSON.stringify(block.contentModel)); 
@@ -2696,8 +2741,6 @@
             gridX = state.viewport?.gridX || 0;
             gridY = state.viewport?.gridY || 0;
             
-            // CHANGE: Only set scale on the very first load of a session.
-            // For all other slide changes, the global `scale` variable will persist.
             if (isFirstLoad) {
                 scale = state.viewport?.scale || 1;
             }
@@ -3416,7 +3459,6 @@
             const currentPage = pages[currentPageIndex];
             if (!currentPage || !currentPage.blocks) return;
 
-            // CHANGE: Render in the order they appear in the array, not sorted by z-index.
             const blocksToRender = currentPage.blocks;
 
             blocksToRender.forEach(blockData => {
@@ -3456,7 +3498,6 @@
             });
         }
         
-        // CHANGE: New drag and drop logic for the list.
         blocksList.addEventListener('dragover', e => {
             e.preventDefault();
             const afterElement = getDragAfterElement(blocksList, e.clientY);
@@ -3693,3 +3734,4 @@
 </script>
 </body>
 </html>
+
