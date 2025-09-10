@@ -231,25 +231,73 @@
         .handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
         
         .coordinates {
-            position: fixed; 
-            top: 10px; 
+            position: fixed;
+            bottom: 10px;
             left: 10px;
             background: rgba(23, 25, 43, 0.6);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            color: var(--text-light); 
+            color: var(--text-light);
             padding: 8px 12px;
-            border-radius: 8px; 
-            font-size: 0.8rem; 
-            z-index: 2001; 
+            border-radius: 8px;
+            font-size: 0.8rem;
+            z-index: 2001;
             cursor: pointer;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             border: 1px solid var(--border-color);
             transition: all 0.3s;
         }
+        #page-title {
+            position: fixed;
+            top: 55px; /* Positioned below the project title */
+            left: 25px; /* Indented to the right */
+            background: rgba(23, 25, 43, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-muted);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-style: italic;
+            z-index: 2001;
+            cursor: text;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+            max-width: 235px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #project-title {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(23, 25, 43, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-light);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            z-index: 2001;
+            cursor: text;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #project-title:focus {
+            outline: 2px solid var(--glow-color);
+        }
         .coordinates.hidden {
             opacity: 0;
-            transform: translateY(-10px);
+            transform: translateY(10px);
             pointer-events: none;
         }
         .coordinates input {
@@ -473,7 +521,7 @@
         }
 
 
-        .page-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .page-controls { display: flex; flex-direction: column; gap: 10px; }
         .page-btn {
             background: rgba(255, 255, 255, 0.1);
             color: var(--text-light);
@@ -489,16 +537,48 @@
             justify-content: center;
             transition: background-color 0.2s, transform 0.2s;
         }
+        .page-controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .page-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .page-actions .page-btn {
+            width: 30px;
+            height: 30px;
+            font-size: 16px;
+        }
+        #pages-list-container {
+            max-height: 20vh;
+            overflow-y: auto;
+        }
         .page-btn:hover { background-color: var(--glow-color); transform: scale(1.1); }
         .page-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; background-color: rgba(255, 255, 255, 0.1); }
-        #page-display {
-            font-weight: 600;
-            background: rgba(0,0,0,0.3);
-            padding: 5px 12px;
-            border-radius: 15px;
-            min-width: 80px;
-            text-align: center;
-            margin: 5px 0;
+
+        #pages-list { list-style: none; padding: 0; }
+        #pages-list li {
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            background: rgba(0,0,0,0.2);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background-color 0.2s, border-left-color 0.2s, border-color 0.2s;
+            border-left: 3px solid transparent;
+        }
+        #pages-list li:hover { background: rgba(255,255,255,0.2); }
+        #pages-list li.selected { background: var(--glow-color); }
+        #pages-list li.current { border-left-color: var(--glow-color); font-weight: bold; }
+        #pages-list li.dragging {
+            opacity: 0.4;
+            background: var(--glow-color);
         }
 
         .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -647,6 +727,9 @@
         </div>
     </div>
 
+    <div id="project-title" contenteditable="true">Untitled MentMap</div>
+    <div id="page-title" contenteditable="true">Untitled Page</div>
+
     <div class="coordinates" id="coordinates" data-translate-key="coords_nothing">Nada selecionado</div>
 
     <div class="shortcut-hint" id="shortcut-hint" style="display: none;">
@@ -654,7 +737,7 @@
         <div class="hint-category" data-translate-key="hint_nav_title">Navegação e Visualização:</div>
         <div class="hint-line"><span data-translate-key="hint_pan">Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa</span></div>
         <div class="hint-line"><span data-translate-key="hint_zoom">Use o <kbd>Scroll</kbd> para dar zoom</span></div>
-        <div class="hint-line"><span data-translate-key="hint_slides">Use <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide</span></div>
+        <div class="hint-line"><span data-translate-key="hint_pages">Use <kbd>PageUp</kbd> / <kbd>PageDown</kbd> para mudar de página</span></div>
         <div class="hint-line"><span data-translate-key="hint_sidebar">Use <kbd>G</kbd> para esconder/mostrar painel lateral</span></div>
         <div class="hint-line"><span data-translate-key="hint_coords"><kbd>N</kbd> para esconder/mostrar coordenadas</span></div>
         <hr>
@@ -752,13 +835,18 @@
             </div>
         </div>
         <div class="sidebar-section">
-            <h4 data-translate-key="sidebar_slides">Slides</h4>
+            <h4 data-translate-key="sidebar_pages">Apresentação</h4>
             <div class="page-controls">
-                <button class="page-btn" id="prev-page-btn" title="Slide Anterior (←)">▲</button>
-                <span id="page-display">Slide 1 / 1</span>
-                <button class="page-btn" id="next-page-btn" title="Próximo Slide (→)">▼</button>
-                <button class="page-btn" id="add-page-btn" title="Adicionar Novo Slide (Shift +)">+</button>
-                <button class="page-btn" id="delete-page-btn" title="Deletar Slide Atual (Shift -)">🗑️</button>
+                <div class="page-controls-header">
+                    <span id="page-info-display">Pág 1 / 1</span>
+                    <div class="page-actions">
+                        <button class="page-btn" id="prev-page-btn" title="Página Anterior (PageUp)">▲</button>
+                        <button class="page-btn" id="next-page-btn" title="Próxima Página (PageDown)">▼</button>
+                        <button class="page-btn" id="add-page-btn" title="Adicionar Nova Página (Shift +)">+</button>
+                        <button class="page-btn" id="delete-page-btn" title="Deletar Página(s) (Delete)">🗑️</button>
+                    </div>
+                </div>
+                <div id="pages-list-container"><ul id="pages-list"></ul></div>
             </div>
         </div>
         <div class="sidebar-section">
@@ -825,7 +913,7 @@
                 hint_nav_title: "Navegação e Visualização:",
                 hint_pan: "Segure <kbd>Shift</kbd> ou <kbd>Clique Meio</kbd> para mover o mapa",
                 hint_zoom: "Use o <kbd>Scroll</kbd> para dar zoom",
-                hint_slides: "Use <kbd>←</kbd> / <kbd>→</kbd> para mudar de slide",
+                hint_pages: "Use <kbd>PageUp</kbd> / <kbd>PageDown</kbd> para mudar de página",
                 hint_sidebar: "Use <kbd>G</kbd> para esconder/mostrar painel lateral",
                 hint_coords: "<kbd>N</kbd> para esconder/mostrar coordenadas",
                 hint_actions_title: "Ações e Atalhos:",
@@ -857,8 +945,8 @@
                 sidebar_embed: "Link Incorporado",
                 sidebar_arrow: "Seta",
                 sidebar_grid: "Grade",
-                sidebar_lines: "Linhas",
-                sidebar_slides: "Slides",
+                sidebar_lines: "Linhas", 
+                sidebar_pages: "Apresentação",
                 sidebar_families: "Famílias",
                 sidebar_family: "Família",
                 sidebar_actions: "Ações",
@@ -870,9 +958,9 @@
                 btn_parent_move: "Grupo",
                 menu_move: "Mover",
                 menu_move_to: "Mover Para >",
-                menu_move_prev: "Slide anterior",
-                menu_move_next: "Próximo slide",
-                menu_move_specific: "Slide nº:",
+                menu_move_prev: "Pág. anterior",
+                menu_move_next: "Próxima pág.",
+                menu_move_specific: "Pág. nº:",
                 menu_rename: "Renomear (F2 / R)",
                 menu_add: "Adicionar >",
                 menu_add_text: "Bloco de Texto",
@@ -889,11 +977,11 @@
                 toast_snap_off: "Encaixe na Grade Desativado",
                 toast_parent_move_on: "Movimento em Grupo Ativado",
                 toast_parent_move_off: "Movimento em Grupo Desativado",
-                toast_page_added: "Slide {page} adicionado",
-                toast_page_deleted: "Slide {page} deletado",
-                toast_cant_delete_last: "Não é possível apagar o último slide.",
+                toast_page_added: "Página {page} adicionada",
+                toast_page_deleted: "{count} página(s) deletada(s).",
+                toast_cant_delete_last: "Não é possível apagar a última página.",
                 toast_pdf_importing: "Importando {name}... Isso pode levar um momento.",
-                toast_pdf_success: "Importado com sucesso {numPages} slides.",
+                toast_pdf_success: "Importado com sucesso {numPages} páginas.",
                 toast_pdf_error: "Falha ao importar PDF. Veja o console para detalhes.",
                 toast_file_loaded: "Arquivo carregado com sucesso!",
                 toast_file_error: "Falha ao carregar arquivo. Pode estar corrompido.",
@@ -901,8 +989,8 @@
                 toast_block_renamed: "Bloco renomeado para '{name}'.",
                 toast_block_hidden_in_list: "Bloco oculto da lista.",
                 toast_block_shown_in_list: "Bloco agora visível na lista.",
-                toast_blocks_moved: "{count} bloco(s) movido(s) para o Slide {slide}.",
-                toast_invalid_slide: "Número do slide inválido!",
+                toast_blocks_moved: "{count} bloco(s) movido(s) para a pág. {page}.",
+                toast_invalid_page: "Número da página inválido!",
                 prompt_media_url: "Insira a URL da Imagem ou Vídeo (YouTube, Vimeo, etc.):",
                 prompt_pdf_url: "Insira a URL do PDF para importar como slides:",
                 prompt_desmos_url: "Insira a URL do gráfico Desmos:",
@@ -939,6 +1027,8 @@
         const grid = document.getElementById('grid');
         const svgCanvas = document.getElementById('arrow-svg');
         const svgDefs = svgCanvas.querySelector('defs');
+        const pageTitleEl = document.getElementById('page-title');
+        const projectTitleEl = document.getElementById('project-title');
         const coordsDisplay = document.getElementById('coordinates');
         const addContentBtn = document.getElementById('add-content-btn');
         const toggleArrowModeBtn = document.getElementById('toggle-arrow-mode-btn');
@@ -951,7 +1041,36 @@
         const nextPageBtn = document.getElementById('next-page-btn');
         const addPageBtn = document.getElementById('add-page-btn');
         const deletePageBtn = document.getElementById('delete-page-btn');
-        const pageDisplay = document.getElementById('page-display');
+        const pageInfoDisplay = document.getElementById('page-info-display');
+        const pagesList = document.getElementById('pages-list');
+
+        pagesList.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(pagesList, e.clientY);
+            if (draggedListItem) {
+                 if (afterElement == null) {
+                    pagesList.appendChild(draggedListItem);
+                } else {
+                    pagesList.insertBefore(draggedListItem, afterElement);
+                }
+            }
+        });
+
+        pagesList.addEventListener('drop', e => {
+            e.preventDefault();
+            if (!draggedListItem) return;
+
+            const newOrderOriginalIndices = [...pagesList.querySelectorAll('li')].map(li => parseInt(li.dataset.pageIndex));
+            
+            const oldPages = [...pages];
+            const oldCurrentPageObject = pages[currentPageIndex];
+
+            pages = newOrderOriginalIndices.map(originalIndex => oldPages[originalIndex]);
+            currentPageIndex = pages.indexOf(oldCurrentPageObject);
+            selectedPageIndices.clear();
+            recordState();
+            updatePagesList();
+        });
         const sidebar = document.querySelector('.sidebar');
         const toggleSnapBtn = document.getElementById('toggle-snap-btn');
         const toggleParentMoveBtn = document.getElementById('toggle-parent-move-btn');
@@ -995,6 +1114,8 @@
         
         let pages = [];
         let currentPageIndex = 0;
+        let selectedPageIndices = new Set();
+        let projectTitle = "Untitled MentMap";
         let families = [];
 
         let history = [];
@@ -1009,8 +1130,11 @@
         }, 30000);
 
         function initialize() {
-            populateFontSizeSelector();
+            projectTitle = "Untitled MentMap";
+            projectTitleEl.textContent = projectTitle;
+            populateFontSizeSelector(); 
             const initialPage = {
+                title: `Página 1`,
                 blocks: [],
                 arrows: [],
                 viewport: { gridX: 0, gridY: 0, scale: 0.7 },
@@ -1319,7 +1443,58 @@
         svgCanvas.addEventListener('click', handleArrowClick);
         coordsDisplay.addEventListener('click', editCoordinates);
 
+        pageTitleEl.addEventListener('click', () => {
+            pageTitleEl.contentEditable = true;
+            pageTitleEl.focus();
+            document.execCommand('selectAll', false, null);
+        });
+
+        pageTitleEl.addEventListener('blur', () => {
+            pageTitleEl.contentEditable = false;
+            const newTitle = pageTitleEl.textContent.trim();
+            if (newTitle && newTitle !== pages[currentPageIndex].title) {
+                pages[currentPageIndex].title = newTitle;
+                updatePagesList();
+                recordState();
+            } else {
+                pageTitleEl.textContent = pages[currentPageIndex].title;
+            }
+        });
+
+        pageTitleEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                pageTitleEl.blur();
+            }
+        });
+
         prevPageBtn.addEventListener('click', goToPrevPage);
+
+        projectTitleEl.addEventListener('click', () => {
+            if (projectTitleEl.contentEditable === 'true') return;
+            projectTitleEl.contentEditable = "true";
+            projectTitleEl.focus();
+            document.execCommand('selectAll', false, null);
+        });
+
+        projectTitleEl.addEventListener('blur', () => {
+            projectTitleEl.contentEditable = false;
+            const newTitle = projectTitleEl.textContent.trim();
+            if (newTitle === '') {
+                projectTitleEl.textContent = projectTitle; // Restore old title if empty
+            } else if (newTitle !== projectTitle) {
+                projectTitle = newTitle;
+                document.title = `${projectTitle} - MentMap`;
+                recordState();
+            }
+        });
+
+        projectTitleEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                projectTitleEl.blur();
+            }
+        });
         nextPageBtn.addEventListener('click', goToNextPage);
         addPageBtn.addEventListener('click', addNewPage);
         deletePageBtn.addEventListener('click', deleteCurrentPage);
@@ -1820,11 +1995,11 @@
                 // Ações de Mover
                 'move-prev-slide': () => moveSelectionToPage(currentPageIndex), // 0-indexed
                 'move-next-slide': () => moveSelectionToPage(currentPageIndex + 2), // 0-indexed
-                'rename-block': () => startRenamingBlock(),
+                'rename-block': startRenamingBlock,
 
                 // Ações de Adicionar
                 'add-text': () => { 
-                    lastBlockCreationAction = () => addNewBlock({ contentModel: [{ text: currentLangStrings.menu_add_text, style: {} }] });
+                    lastBlockCreationAction = () => addNewBlock({ contentModel: [{ text: 'Novo Bloco de Texto', style: {} }] });
                     lastBlockCreationAction();
                 },
                 'add-media-file': () => {
@@ -2022,11 +2197,11 @@
                 redo();
             }
 
-            if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+            if (e.key === 'PageDown') {
                 e.preventDefault();
                 goToNextPage();
             }
-            if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            if (e.key === 'PageUp') {
                 e.preventDefault();
                 goToPrevPage();
             }
@@ -2038,6 +2213,11 @@
                 }
             }
             if (e.key === 'Delete') {
+                if (selectedPageIndices.size > 0) {
+                    deleteSelectedPages();
+                    return;
+                }
+
                 selection.forEach(item => {
                     if (item.classList.contains('block')) {
                         svgCanvas.querySelectorAll(`.arrow-group[data-start-block="${item.id}"], .arrow-group[data-end-block="${item.id}"]`).forEach(arrowEl => arrowEl.arrowInstance?.destroy()); // Use optional chaining
@@ -2734,6 +2914,7 @@
                 history = history.slice(0, historyIndex + 1);
             }
             const state = {
+                title: projectTitle,
                 pages: JSON.parse(JSON.stringify(pages)),
                 currentPageIndex: currentPageIndex,
                 families: JSON.parse(JSON.stringify(families)),
@@ -2748,6 +2929,8 @@
 
         function loadState(state) {
             if (!state) return;
+            projectTitle = state.title || "Untitled MentMap";
+            projectTitleEl.textContent = projectTitle;
             pages = JSON.parse(JSON.stringify(state.pages));
             families = state.families ? JSON.parse(JSON.stringify(state.families)) : [];
             currentPageIndex = state.currentPageIndex;
@@ -2773,15 +2956,16 @@
         function saveCurrentPageState() {
             if (isEditing) finishEditing();
             if (pages.length === 0 || currentPageIndex < 0) return;
-            pages[currentPageIndex] = { // Use arrowInstance which holds the state
-                blocks: Array.from(document.querySelectorAll('.block')).map(b => b.blockInstance.serialize()),
-                arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(ag => ag.arrowInstance.serialize()), // Use arrowInstance which holds the state
-                styles: {
-                    gridBg: document.body.style.background,
-                    gridLines: grid.style.backgroundImage,
-                },
-                viewport: { gridX, gridY, scale }
+            const page = pages[currentPageIndex];
+            if (!page) return;
+
+            page.blocks = Array.from(document.querySelectorAll('.block')).map(b => b.blockInstance.serialize());
+            page.arrows = Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(ag => ag.arrowInstance.serialize());
+            page.styles = {
+                gridBg: document.body.style.background,
+                gridLines: grid.style.backgroundImage,
             };
+            page.viewport = { gridX, gridY, scale };
         }
 
         function loadPage(index, isFirstLoad = false) {
@@ -2793,6 +2977,8 @@
             currentPageIndex = index;
             const pageState = pages[currentPageIndex];
             applyPageState(pageState, isFirstLoad);
+            pageTitleEl.textContent = pageState.title || `Pág. ${currentPageIndex + 1}`;
+            pageTitleEl.contentEditable = false;
             updatePageUI();
         }
 
@@ -2843,16 +3029,18 @@
         }
         
         function updatePageUI() {
-            pageDisplay.textContent = `Slide ${currentPageIndex + 1} / ${pages.length}`;
+            pageInfoDisplay.textContent = `Pág ${currentPageIndex + 1} / ${pages.length}`;
             prevPageBtn.disabled = currentPageIndex === 0;
             nextPageBtn.disabled = currentPageIndex >= pages.length - 1;
-            deletePageBtn.disabled = pages.length <= 1;
+            deletePageBtn.disabled = pages.length <= 1 && selectedPageIndices.size === 0;
             updateBlocksList();
+            updatePagesList();
         }
 
         function addNewPage() {
             saveCurrentPageState();
             const newPage = {
+                title: `Página ${pages.length + 1}`,
                 blocks: [],
                 arrows: [],
                 viewport: { gridX: 0, gridY: 0, scale: 1 },
@@ -2868,24 +3056,50 @@
         }
 
         function deleteCurrentPage() {
-            if (pages.length <= 1) {
+            if (selectedPageIndices.size > 0) {
+                deleteSelectedPages();
+                return;
+            }
+            if (pages.length > 1) {
+                if (confirm(`Tem certeza que deseja deletar "${pages[currentPageIndex].title}"?`)) {
+                    pages.splice(currentPageIndex, 1);
+                    currentPageIndex = Math.min(currentPageIndex, pages.length - 1);
+                    loadPage(currentPageIndex, true);
+                    recordState();
+                    showToast(currentLangStrings.toast_page_deleted.replace('{count}', 1));
+                }
+            } else {
+                showToast(currentLangStrings.toast_cant_delete_last);
+            }
+        }
+
+        function deleteSelectedPages() {
+            if (selectedPageIndices.size === 0) return;
+            if (pages.length - selectedPageIndices.size < 1) {
                 showToast(currentLangStrings.toast_cant_delete_last);
                 return;
             }
-            const pageHasContent = pages[currentPageIndex] && pages[currentPageIndex].blocks.length > 0;
-            let confirmed = true;
-            if (pageHasContent) {
-                confirmed = window.confirm("Este slide tem conteúdo. Tem certeza que deseja deletá-lo?");
+
+            if (!confirm(`Tem certeza que deseja deletar ${selectedPageIndices.size} página(s) selecionada(s)?`)) {
+                return;
             }
 
-            if (confirmed) {
-                const deletedPageIndex = currentPageIndex + 1;
-                pages.splice(currentPageIndex, 1);
-                const newIndex = Math.min(currentPageIndex, pages.length - 1);
-                loadPage(newIndex, true); 
-                recordState();
-                showToast(currentLangStrings.toast_page_deleted.replace('{page}', deletedPageIndex));
-            }
+            // Sort indices in descending order to avoid shifting issues
+            const sortedIndices = [...selectedPageIndices].sort((a, b) => b - a);
+            
+            let newCurrentPageIndex = currentPageIndex;
+
+            sortedIndices.forEach(index => {
+                pages.splice(index, 1);
+                if (index < newCurrentPageIndex) {
+                    newCurrentPageIndex--;
+                }
+            });
+            
+            selectedPageIndices.clear();
+            loadPage(Math.max(0, newCurrentPageIndex), true);
+            recordState();
+            showToast(currentLangStrings.toast_page_deleted.replace('{count}', sortedIndices.length));
         }
         
         function goToNextPage() {
@@ -2967,6 +3181,7 @@
                             familyId: newFamily.id,
                             showInList: true
                         }],
+                        title: `Página ${importStartIndex + i} - ${familyName}`,
                         arrows: [],
                         viewport: { gridX: 0, gridY: 0, scale: 1 },
                         styles: {
@@ -2991,12 +3206,15 @@
         function saveAllPages() {
             saveCurrentPageState();
             const state = {
+                title: projectTitle,
                 formatVersion: "3.3",
                 pages: pages,
                 families: families,
                 blockCounter: blockCounter
             };
-            download('mentmap-presentation.json', JSON.stringify(state, null, 2));
+            // Sanitize the title to create a valid filename
+            const filename = (projectTitle.replace(/[\s/\\?%*:"<>|]/g, '_') || 'mentmap-presentation') + '.json';
+            download(filename, JSON.stringify(state, null, 2));
         }
 
         function loadAllPages(event) {
@@ -3007,22 +3225,27 @@
                 try {
                     const loadedData = JSON.parse(e.target.result);
                     if (loadedData.pages && Array.isArray(loadedData.pages)) {
+                        projectTitle = loadedData.title || "Untitled MentMap";
                         pages = loadedData.pages;
                         families = loadedData.families || [];
                         blockCounter = loadedData.blockCounter || 1;
                     } else {
                         // Legacy format
                         pages = [loadedData];
+                        projectTitle = "Untitled MentMap";
                         families = [];
                         blockCounter = 1;
                     }
                     // Backward compatibility
                     pages.forEach(page => {
                         page.blocks.forEach(block => {
+                            page.title = page.title || `Página ${pages.indexOf(page) + 1}`;
                             block.name = block.name || `Bloco ${block.id.split('-')[1]}`;
                             block.showInList = block.showInList ?? true; // Default to true if not present
                         })
                     });
+                    projectTitleEl.textContent = projectTitle;
+                    document.title = `${projectTitle} - MentMap`;
                     loadPage(0, true);
                     renderFamiliesList();
                     history = [];
@@ -3471,50 +3694,67 @@
         let draggedListItem = null;
 
         function updateBlocksList() {
-            blocksList.innerHTML = '';
-            const currentPage = pages[currentPageIndex];
-            if (!currentPage || !currentPage.blocks) return;
-
-            const blocksToRender = currentPage.blocks.filter(b => b.showInList);
-
-            blocksToRender.forEach(blockData => {
-                const li = document.createElement('li');
-                li.textContent = blockData.name;
-                li.dataset.blockId = blockData.id;
-                li.setAttribute('draggable', 'true');
-
-                if (selection.some(sel => sel.id === blockData.id)) {
-                    li.classList.add('selected');
-                }
-                li.addEventListener('click', (e) => {
-                    const blockEl = document.getElementById(blockData.id);
-                    if (blockEl) {
-                        updateSelection(blockEl, e.shiftKey, true);
-                        // Define a margin from the top-left corner of the viewport
-                        const margin = 50; 
-
-                        // Calculate the required grid translation to place the block at the margin, respecting the current scale.
-                        const newGridX = margin - (blockEl.offsetLeft * scale); // Preserve current scale
-                        const newGridY = margin - (blockEl.offsetTop * scale); // Preserve current scale
-
-                        // Ensure grid coordinates do not become positive
-                        gridX = Math.min(0, newGridX);
-                        gridY = Math.min(0, newGridY);
-
-                        updateGridTransform();
-                    }
-                });
-
-                li.addEventListener('dragstart', (e) => {
-                    draggedListItem = e.target;
-                    setTimeout(() => e.target.classList.add('dragging'), 0);
-                });
-                li.addEventListener('dragend', (e) => {
-                    draggedListItem.classList.remove('dragging');
-                    draggedListItem = null;
-                });
-                blocksList.appendChild(li);
-            });
+             blocksList.innerHTML = '';
+             const currentPage = pages[currentPageIndex];
+             if (!currentPage || !currentPage.blocks) return;
+ 
+             const visibleBlocks = currentPage.blocks.filter(b => b.showInList);
+             const visibleBlockIds = visibleBlocks.map(b => b.id);
+ 
+             visibleBlocks.forEach(blockData => {
+                 const li = document.createElement('li');
+                 li.textContent = blockData.name;
+                 li.dataset.blockId = blockData.id;
+                 li.setAttribute('draggable', 'true');
+ 
+                 if (selection.some(sel => sel.id === blockData.id)) {
+                     li.classList.add('selected');
+                 }
+ 
+                 li.addEventListener('click', (e) => {
+                     e.stopPropagation();
+                     const clickedBlockId = li.dataset.blockId;
+                     const clickedBlockEl = document.getElementById(clickedBlockId);
+                     if (!clickedBlockEl) return;
+ 
+                     if (e.ctrlKey) { // Range selection
+                         const clickedIndex = visibleBlockIds.indexOf(clickedBlockId);
+                         const lastSelectedBlock = lastSelectedItem;
+                         let anchorIndex = -1;
+                         if (lastSelectedBlock) {
+                             anchorIndex = visibleBlockIds.indexOf(lastSelectedBlock.id);
+                         }
+                         if (anchorIndex === -1) {
+                             anchorIndex = clickedIndex;
+                         }
+ 
+                         const start = Math.min(anchorIndex, clickedIndex);
+                         const end = Math.max(anchorIndex, clickedIndex);
+ 
+                         deselectAll();
+                         for (let i = start; i <= end; i++) {
+                             const blockIdInRange = visibleBlockIds[i];
+                             const blockElInRange = document.getElementById(blockIdInRange);
+                             if (blockElInRange) {
+                                 updateSelection(blockElInRange, true, true);
+                             }
+                         }
+                     } else if (e.shiftKey) { // Individual toggle
+                         updateSelection(clickedBlockEl, true, true);
+                     } else { // Single selection
+                         updateSelection(clickedBlockEl, false, true);
+                         const margin = 50;
+                         gridX = Math.min(0, margin - (clickedBlockEl.offsetLeft * scale));
+                         gridY = Math.min(0, margin - (clickedBlockEl.offsetTop * scale));
+                         updateGridTransform();
+                     }
+                 });
+ 
+                 li.addEventListener('dragstart', (e) => { draggedListItem = e.target; setTimeout(() => e.target.classList.add('dragging'), 0); });
+                 li.addEventListener('dragend', (e) => { draggedListItem.classList.remove('dragging'); draggedListItem = null; });
+ 
+                 blocksList.appendChild(li);
+             });
         }
         
         blocksList.addEventListener('dragover', e => {
@@ -3635,12 +3875,61 @@
             recordState();
         }
 
+        function updatePagesList() {
+            pagesList.innerHTML = '';
+            selectedPageIndices.forEach(i => { if (i >= pages.length) selectedPageIndices.delete(i); });
+
+            pages.forEach((page, index) => {
+                const li = document.createElement('li');
+                const pageTitle = page.title || `Página ${index + 1}`;
+                li.textContent = `${index + 1}: ${pageTitle}`;
+                li.dataset.pageIndex = index;
+                li.setAttribute('draggable', 'true');
+
+                li.addEventListener('dragstart', (e) => {
+                    draggedListItem = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                });
+
+                li.addEventListener('dragend', (e) => {
+                    if (draggedListItem) draggedListItem.classList.remove('dragging');
+                    draggedListItem = null;
+                });
+
+                if (index === currentPageIndex) li.classList.add('current');
+                if (selectedPageIndices.has(index)) li.classList.add('selected');
+
+                li.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const clickedIndex = parseInt(li.dataset.pageIndex);
+
+                    if (e.ctrlKey) { // Range selection
+                        const anchorIndex = selectedPageIndices.size > 0 ? [...selectedPageIndices].pop() : currentPageIndex;
+                        const start = Math.min(anchorIndex, clickedIndex);
+                        const end = Math.max(anchorIndex, clickedIndex);
+                        selectedPageIndices.clear();
+                        for (let i = start; i <= end; i++) {
+                            selectedPageIndices.add(i);
+                        }
+                    } else if (e.shiftKey) { // Individual toggle
+                        if (selectedPageIndices.has(clickedIndex)) selectedPageIndices.delete(clickedIndex);
+                        else selectedPageIndices.add(clickedIndex);
+                    } else { // Single selection
+                        selectedPageIndices.clear();
+                        loadPage(clickedIndex);
+                    }
+                    updatePagesList();
+                });
+                pagesList.appendChild(li);
+            });
+        }
+
         // --- Move Blocks Functionality ---
 
         function moveSelectionToPage(targetPageNumber) {
             const targetIndex = targetPageNumber - 1;
             if (targetIndex < 0 || targetIndex >= pages.length || targetIndex === currentPageIndex) {
-                 if (targetIndex !== currentPageIndex) showToast(currentLangStrings.toast_invalid_slide);
+                 if (targetIndex !== currentPageIndex) showToast(currentLangStrings.toast_invalid_page);
                 return;
             }
 
@@ -3658,7 +3947,7 @@
             if (!pages[targetIndex].blocks) pages[targetIndex].blocks = [];
             pages[targetIndex].blocks.push(...blockDataToMove);
             
-            showToast(currentLangStrings.toast_blocks_moved.replace('{count}', blockIdsToMove.size).replace('{slide}', targetPageNumber));
+            showToast(currentLangStrings.toast_blocks_moved.replace('{count}', blockIdsToMove.size).replace('{page}', targetPageNumber));
             
             loadPage(currentPageIndex);
             recordState();
