@@ -78,7 +78,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 1;
+            z-index: 5;
         }
         
         #arrow-svg .arrow-group {
@@ -880,8 +880,8 @@
                 menu_add_media: "Imagem / Vídeo",
                 menu_add_pdf: "PDF como Slides",
                 menu_add_phet: "PhET Colorado",
-                menu_add_generic_site: "Site Genérico",
                 menu_from_link: "Do Link >",
+                menu_add_generic_site: "Site Genérico",
                 color_picker_title: "Seletor de Cores",
                 btn_cancel: "Cancelar",
                 btn_confirm: "Confirmar",
@@ -1038,6 +1038,254 @@
             });
         }
 
+        class Block {
+            constructor(config) {
+                // Properties from config
+                this.id = config.id || `block-${blockCounter++}`;
+                this.x = config.x;
+                this.y = config.y;
+                this.width = config.width || '250px';
+                this.height = config.height; // can be null/undefined
+                this.bgColor = config.bgColor || 'var(--panel-bg)';
+                this.borderColor = config.borderColor;
+                this.zIndex = config.zIndex || blockCounter;
+                this.handleColor = config.handleColor;
+                this.handleDisplay = config.handleDisplay;
+                this.familyId = config.familyId;
+                this.showInList = config.showInList !== false;
+                this.contentModel = config.contentModel || [];
+                this.name = config.name || `Bloco ${this.id.split('-')[1]}`.replace(' (cópia)','');
+
+                if (config.htmlContent) { 
+                    const tempContentEl = document.createElement('div');
+                    this.contentModel = parseContent(tempContentEl, config.htmlContent);
+                }
+
+                // Create the element and link it
+                this.element = this.createElement();
+                this.element.blockInstance = this;
+
+                // Keep a reference to the contentModel on the element for now to minimize changes elsewhere
+                this.element.contentModel = this.contentModel;
+
+                // Initial render
+                this.renderContent();
+                this.updateNameDisplay();
+
+                // Attach listeners
+                this.attachEventListeners();
+                
+                // Add to grid
+                grid.appendChild(this.element);
+            }
+
+            createElement() {
+                const block = document.createElement('div');
+                block.id = this.id;
+                block.className = 'block';
+                block.style.left = `${this.x}px`;
+                block.style.top = `${this.y}px`;
+                block.style.width = this.width;
+                if (this.height) block.style.height = this.height;
+                block.style.backgroundColor = this.bgColor;
+                if (this.borderColor) block.style.borderColor = this.borderColor;
+                block.style.zIndex = this.zIndex;
+                if (this.handleColor) block.style.setProperty('--handle-color', this.handleColor);
+                if (this.handleDisplay) block.style.setProperty('--handle-display', this.handleDisplay);
+                if (this.familyId) block.dataset.familyId = this.familyId;
+                
+                block.dataset.showInList = this.showInList;
+                block.dataset.name = this.name;
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'block-name';
+                block.appendChild(nameEl);
+
+                const contentEl = document.createElement('div');
+                contentEl.className = 'block-content';
+                block.appendChild(contentEl);
+
+                const handles = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+                handles.forEach(handle => {
+                    const handleEl = document.createElement('div');
+                    handleEl.className = `resize-handle handle-${handle}`;
+                    block.appendChild(handleEl);
+                });
+                return block;
+            }
+
+            attachEventListeners() {
+                this.element.addEventListener('mousedown', (e) => handleBlockMouseDown(e, this.element));
+                this.element.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!selection.includes(this.element)) {
+                       updateSelection(this.element, e.shiftKey);
+                    }
+                    showContextMenu(e.clientX, e.clientY, true);
+                });
+
+                const contentEl = this.element.querySelector('.block-content');
+                contentEl.addEventListener('keydown', (e) => {
+                    if (isEditing && (e.key === 'Enter' && !e.shiftKey)) {
+                        e.preventDefault();
+                        finishEditing();
+                    }
+                });
+                
+                new ResizeObserver(() => updateArrowsForBlock(this.element)).observe(this.element);
+            }
+
+            renderContent() {
+                const contentEl = this.element.querySelector('.block-content');
+                contentEl.innerHTML = '';
+                if (!this.contentModel || this.contentModel.length === 0) {
+                    contentEl.innerHTML = '<br>';
+                    return;
+                }
+                this.contentModel.forEach(span => {
+                    if (span.isHTML) {
+                        contentEl.insertAdjacentHTML('beforeend', span.text);
+                        return;
+                    }
+                    const spanEl = document.createElement('span');
+                    spanEl.textContent = span.text;
+                    
+                    Object.entries(span.style).forEach(([key, value]) => {
+                        if (value) {
+                             spanEl.style[key] = value;
+                        }
+                    });
+                    contentEl.appendChild(spanEl);
+                });
+
+                if (contentEl.querySelector('iframe')) {
+                    contentEl.classList.add('has-iframe');
+                }
+            }
+
+            updateNameDisplay() {
+                const nameEl = this.element.querySelector('.block-name');
+                const isDefaultName = (this.name.startsWith('Bloco ') && !isNaN(parseInt(this.name.split(' ')[1]))) || this.name.endsWith(' (cópia)');
+
+                if (isDefaultName) {
+                    nameEl.style.display = 'none';
+                } else {
+                    nameEl.style.display = '';
+                    nameEl.textContent = this.name;
+                    const bgColor = getComputedStyle(this.element).backgroundColor;
+                    const rgb = bgColor.match(/\d+/g);
+                    if (rgb) {
+                        const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
+                        nameEl.style.color = brightness < 128 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.7)';
+                    }
+                }
+            }
+
+            serialize() {
+                return {
+                    id: this.id,
+                    name: this.name,
+                    contentModel: this.contentModel,
+                    x: parseInt(this.element.style.left),
+                    y: parseInt(this.element.style.top),
+                    width: this.element.style.width,
+                    height: this.element.style.height,
+                    bgColor: this.bgColor,
+                    borderColor: this.borderColor,
+                    zIndex: this.zIndex,
+                    handleColor: this.handleColor,
+                    handleDisplay: this.handleDisplay,
+                    familyId: this.familyId,
+                    showInList: this.showInList
+                };
+            }
+        }
+
+        class Arrow {
+            constructor(config) {
+                this.startBlockId = config.startBlock;
+                this.endBlockId = config.endBlock;
+                this.color = config.color || '#3498db';
+                this.width = config.width || 3;
+                this.isBidirectional = config.bidirectional || false;
+
+                this.element = this.createElement();
+                this.element.arrowInstance = this;
+
+                svgCanvas.appendChild(this.element);
+                this.update();
+            }
+
+            createElement() {
+                const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                arrowGroup.classList.add('arrow-group');
+                arrowGroup.dataset.startBlock = this.startBlockId;
+                arrowGroup.dataset.endBlock = this.endBlockId;
+
+                const arrowLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                arrowLine.classList.add('arrow-line');
+
+                const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                hitbox.classList.add('arrow-hitbox');
+
+                arrowGroup.appendChild(arrowLine);
+                arrowGroup.appendChild(hitbox);
+                return arrowGroup;
+            }
+
+            update() {
+                const startBlock = document.getElementById(this.startBlockId);
+                const endBlock = document.getElementById(this.endBlockId);
+                if (!startBlock || !endBlock) { this.destroy(); return; }
+
+                const arrowLine = this.element.querySelector('.arrow-line');
+                const hitbox = this.element.querySelector('.arrow-hitbox');
+                
+                const startPoint = getClosestConnectionPoint(startBlock, endBlock);
+                const endPoint = getClosestConnectionPoint(endBlock, startBlock);
+
+                [arrowLine, hitbox].forEach(el => {
+                    el.setAttribute('x1', startPoint.x); 
+                    el.setAttribute('y1', startPoint.y);
+                    el.setAttribute('x2', endPoint.x); 
+                    el.setAttribute('y2', endPoint.y);
+                });
+
+                arrowLine.setAttribute('stroke', this.color);
+                arrowLine.setAttribute('stroke-width', this.width);
+                this.element.dataset.bidirectional = this.isBidirectional;
+
+                const headSize = Number(this.width) * 3 + 5;
+                
+                const endMarkerId = `arrowhead-end-${this.startBlockId}-${this.endBlockId}`;
+                createOrUpdateMarker(endMarkerId, this.color, headSize).setAttribute('orient', 'auto');
+                arrowLine.setAttribute('marker-end', `url(#${endMarkerId})`);
+
+                const startMarkerId = `arrowhead-start-${this.startBlockId}-${this.endBlockId}`;
+                if (this.isBidirectional) {
+                    createOrUpdateMarker(startMarkerId, this.color, headSize).setAttribute('orient', 'auto-start-reverse');
+                    arrowLine.setAttribute('marker-start', `url(#${startMarkerId})`);
+                } else {
+                    arrowLine.removeAttribute('marker-start');
+                    document.getElementById(startMarkerId)?.remove();
+                }
+            }
+
+            setBidirectional(isBidi) {
+                this.isBidirectional = isBidi;
+                this.update();
+            }
+
+            destroy() {
+                document.getElementById(`arrowhead-end-${this.startBlockId}-${this.endBlockId}`)?.remove();
+                document.getElementById(`arrowhead-start-${this.startBlockId}-${this.endBlockId}`)?.remove();
+                this.element.remove();
+            }
+
+            serialize() { return { startBlock: this.startBlockId, endBlock: this.endBlockId, color: this.color, width: this.width, bidirectional: this.isBidirectional }; }
+        }
+
         // --- Listeners de Eventos Principais ---
         addContentBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
@@ -1183,84 +1431,6 @@
             updateBlocksList();
         }
 
-        function createBlock(config) {
-            const block = document.createElement('div');
-            block.id = config.id || `block-${blockCounter++}`;
-            block.className = 'block';
-            block.style.left = `${config.x}px`;
-            block.style.top = `${config.y}px`;
-            block.style.width = config.width || '250px';
-            if (config.height) { 
-                block.style.height = config.height;
-            }
-            const bgColor = config.bgColor || 'var(--panel-bg)';
-            block.style.backgroundColor = bgColor;
-            if (config.borderColor) block.style.borderColor = config.borderColor;
-
-            block.style.zIndex = config.zIndex || blockCounter;
-
-            if (config.handleColor) block.style.setProperty('--handle-color', config.handleColor);
-            if (config.handleDisplay) block.style.setProperty('--handle-display', config.handleDisplay);
-
-            if (config.familyId) {
-                block.dataset.familyId = config.familyId;
-            }
-            
-            block.dataset.showInList = config.showInList !== false;
-            block.contentModel = config.contentModel || [];
-
-            const nameEl = document.createElement('div');
-            nameEl.className = 'block-name';
-            block.appendChild(nameEl);
-
-            const contentEl = document.createElement('div');
-            contentEl.className = 'block-content';
-            block.appendChild(contentEl);
-
-            block.dataset.name = config.name || `Bloco ${block.id.split('-')[1]}`;
-            updateBlockNameDisplay(block);
-
-
-            if (config.htmlContent) { 
-                block.contentModel = parseContent(contentEl, config.htmlContent);
-            }
-            
-            renderContent(block.contentModel, contentEl);
-
-            if (contentEl.querySelector('iframe')) {
-                contentEl.classList.add('has-iframe');
-            }
-
-            const handles = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
-            handles.forEach(handle => {
-                const handleEl = document.createElement('div');
-                handleEl.className = `resize-handle handle-${handle}`;
-                block.appendChild(handleEl);
-            });
-            
-            grid.appendChild(block);
-
-            block.addEventListener('mousedown', (e) => handleBlockMouseDown(e, block));
-            block.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (!selection.includes(block)) {
-                   updateSelection(block, e.shiftKey);
-                }
-                showContextMenu(e.clientX, e.clientY, true);
-            });
-
-            contentEl.addEventListener('keydown', (e) => {
-                if (isEditing && (e.key === 'Enter' && !e.shiftKey)) {
-                    e.preventDefault();
-                    finishEditing();
-                }
-            });
-            
-            new ResizeObserver(() => updateArrowsForBlock(block)).observe(block);
-            return block;
-        }
-
         function addNewBlock(options = {}) {
             let coords;
             if (contextMenuX && contextMenuY) {
@@ -1281,8 +1451,9 @@
             };
             Object.assign(config, options);
 
-            const newBlock = createBlock(config);
-            updateSelection(newBlock, false);
+            const blockInstance = new Block(config);
+            const newBlock = blockInstance.element;
+            updateSelection(newBlock, false); // selection array stores DOM elements
             
             if (!isEmbed) {
                 startEditing(newBlock);
@@ -1296,7 +1467,7 @@
             recordState();
             updateBlocksList();
         }
-
+        
         function handleBlockMouseDown(e, block) {
             block.classList.add('is-held-down');
             if (e.target.tagName === 'IFRAME' || e.target.tagName === 'VIDEO' || e.target.tagName === 'IMG') {
@@ -1437,6 +1608,10 @@
             const wasDraggingOrResizing = isDragging || isResizing;
 
             if (isDrawingArrow) endArrow(e);
+
+            if (isMarqueeSelecting && marqueeHasMoved) {
+                finalizeMarqueeSelection();
+            }
             
             if (isDragging) {
                 document.body.style.cursor = 'default';
@@ -1458,9 +1633,6 @@
                 document.body.style.cursor = 'default';
             }
             
-            if (isMarqueeSelecting && marqueeHasMoved) {
-                finalizeMarqueeSelection();
-            }
             if (isMarqueeSelecting) {
                 isMarqueeSelecting = false;
                 if(marqueeBox) marqueeBox.remove();
@@ -1808,7 +1980,7 @@
                         }
                     };
                     lastBlockCreationAction = createGenericSiteBlock;
-                    lastBlockCreationAction();
+                    createGenericSiteBlock();
                 }
             };
 
@@ -1868,27 +2040,10 @@
             if (e.key === 'Delete') {
                 selection.forEach(item => {
                     if (item.classList.contains('block')) {
-                        const blockId = item.id;
-                        svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(a => {
-                            const arrowLine = a.querySelector('.arrow-line');
-                            if (arrowLine) {
-                                const endMarkerUrl = arrowLine.getAttribute('marker-end');
-                                if (endMarkerUrl) document.getElementById(endMarkerUrl.slice(5, -1))?.remove();
-                                const startMarkerUrl = arrowLine.getAttribute('marker-start');
-                                if (startMarkerUrl) document.getElementById(startMarkerUrl.slice(5, -1))?.remove();
-                            }
-                            a.remove();
-                        });
+                        svgCanvas.querySelectorAll(`.arrow-group[data-start-block="${item.id}"], .arrow-group[data-end-block="${item.id}"]`).forEach(arrowEl => arrowEl.arrowInstance?.destroy()); // Use optional chaining
                         item.remove();
                     } else if (item.classList.contains('arrow-group')) {
-                        const arrowLine = item.querySelector('.arrow-line');
-                        if (arrowLine) {
-                            const endMarkerUrl = arrowLine.getAttribute('marker-end');
-                            if (endMarkerUrl) document.getElementById(endMarkerUrl.slice(5, -1))?.remove();
-                            const startMarkerUrl = arrowLine.getAttribute('marker-start');
-                            if (startMarkerUrl) document.getElementById(startMarkerUrl.slice(5, -1))?.remove();
-                        }
-                        item.remove();
+                        item.arrowInstance?.destroy(); // Use optional chaining
                     }
                 });
                 deselectAll();
@@ -2190,18 +2345,13 @@
             const reverseArrow = endBlock ? svgCanvas.querySelector(`.arrow-group[data-start-block="${endBlock.id}"][data-end-block="${arrowStartBlock.id}"]`) : null;
 
             if (reverseArrow) {
-                const reverseLine = reverseArrow.querySelector('.arrow-line');
-                const color = reverseLine.getAttribute('stroke');
-                const strokeWidth = parseFloat(reverseLine.getAttribute('stroke-width')) || 3;
-                const headSize = strokeWidth * 3 + 5;
-                
-                const startMarkerId = `arrowhead-start-${endBlock.id}-${arrowStartBlock.id}`;
-                const marker = createOrUpdateMarker(startMarkerId, color, headSize);
-                marker.setAttribute('orient', 'auto-start-reverse');
-                
-                reverseLine.setAttribute('marker-start', `url(#${startMarkerId})`);
-                reverseArrow.dataset.bidirectional = 'true';
-                
+                const arrowInstance = reverseArrow.arrowInstance;
+                if (arrowInstance) {
+                    arrowInstance.setBidirectional(true);
+                } else { // Fallback for safety, though with the class structure this is less likely
+                    reverseArrow.dataset.bidirectional = 'true';
+                    updateArrowsForBlock(document.getElementById(reverseArrow.dataset.startBlock));
+                }
                 tempGroup?.remove();
                 recordState();
 
@@ -2210,27 +2360,15 @@
                 if (arrowExists) {
                     tempGroup?.remove();
                 } else {
-                    const arrowLine = tempArrow;
-                    const color = arrowLine.getAttribute('stroke');
-                    const strokeWidth = parseFloat(arrowLine.getAttribute('stroke-width')) || 3;
-                    const headSize = strokeWidth * 3 + 5;
-                    
-                    const markerId = `arrowhead-end-${arrowStartBlock.id}-${endBlock.id}`;
-                    const marker = createOrUpdateMarker(markerId, color, headSize);
-                    marker.setAttribute('orient', 'auto');
-                    arrowLine.setAttribute('marker-end', `url(#${markerId})`);
-
-                    tempGroup.classList.add('arrow-group');
-                    tempGroup.dataset.startBlock = arrowStartBlock.id;
-                    tempGroup.dataset.endBlock = endBlock.id;
-                    
-                    arrowLine.classList.add('arrow-line');
-                    const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    hitbox.classList.add('arrow-hitbox');
-                    tempGroup.appendChild(hitbox);
-                    updateSingleArrow(tempGroup);
+                    const newArrowInstance = new Arrow({
+                        startBlock: arrowStartBlock.id,
+                        endBlock: endBlock.id,
+                        color: tempArrow.getAttribute('stroke'),
+                        width: tempArrow.getAttribute('stroke-width')
+                    });
+                    tempGroup?.remove();
                     if (selection.includes(arrowStartBlock) && selection.includes(endBlock)) {
-                        updateSelection(tempGroup, true);
+                        updateSelection(newArrowInstance.element, true);
                     }
                     recordState();
                 }
@@ -2303,41 +2441,11 @@
             return marker;
         }
 
-        function updateSingleArrow(arrowGroup) {
-            const startBlock = document.getElementById(arrowGroup.dataset.startBlock);
-            const endBlock = document.getElementById(arrowGroup.dataset.endBlock);
-            if (!startBlock || !endBlock) return;
-            const arrowLine = arrowGroup.querySelector('.arrow-line');
-            const hitbox = arrowGroup.querySelector('.arrow-hitbox');
-            if (!arrowLine || !hitbox) return;
-            
-            const startPoint = getClosestConnectionPoint(startBlock, endBlock);
-            const endPoint = getClosestConnectionPoint(endBlock, startBlock);
-
-            [arrowLine, hitbox].forEach(el => {
-                el.setAttribute('x1', startPoint.x); 
-                el.setAttribute('y1', startPoint.y);
-                el.setAttribute('x2', endPoint.x); 
-                el.setAttribute('y2', endPoint.y);
-            });
-            
-            const color = arrowLine.getAttribute('stroke') || '#3498db';
-            const strokeWidth = parseFloat(arrowLine.getAttribute('stroke-width')) || 3;
-            const headSize = strokeWidth * 3 + 5; 
-            
-            const endMarkerUrl = arrowLine.getAttribute('marker-end');
-            if (endMarkerUrl) {
-                createOrUpdateMarker(endMarkerUrl.slice(5, -1), color, headSize);
-            }
-            const startMarkerUrl = arrowLine.getAttribute('marker-start');
-            if (startMarkerUrl) {
-                createOrUpdateMarker(startMarkerUrl.slice(5, -1), color, headSize);
-            }
-        }
-
         function updateArrowsForBlock(block) {
             const blockId = block.id;
-            svgCanvas.querySelectorAll(`[data-start-block="${blockId}"], [data-end-block="${blockId}"]`).forEach(updateSingleArrow);
+            svgCanvas.querySelectorAll(`.arrow-group[data-start-block="${blockId}"], .arrow-group[data-end-block="${blockId}"]`).forEach(arrowEl => {
+                arrowEl.arrowInstance?.update(); // Use optional chaining
+            });
         }
 
         function updateCoordinates(e = null) {
@@ -2508,12 +2616,11 @@
         nonColorInputs.linkSrc.addEventListener('change', recordState);
 
         const updateSelectedArrows = (widthValue) => {
-            selection.forEach(item => {
-                if (item.classList.contains('arrow-group')) {
-                    const arrowLine = item.querySelector('.arrow-line');
-                    arrowLine.setAttribute('stroke-width', widthValue);
-                    updateSingleArrow(item);
-                }
+            selection.forEach(item => { 
+                if (item.arrowInstance) {
+                    item.arrowInstance.width = widthValue;
+                    item.arrowInstance.update();
+                } 
             });
         };
 
@@ -2580,16 +2687,17 @@
         function handleColorConfirm(targetType, color) {
             const actions = {
                 'blockBg': () => selection.forEach(item => {
-                    if (item.classList.contains('block')) {
-                        item.style.backgroundColor = color;
-                        updateBlockNameDisplay(item);
+                    if (item.blockInstance) { // Use instance properties
+                        item.blockInstance.bgColor = color;
+                        item.style.backgroundColor = color; // Also update the DOM element directly
+                        item.blockInstance.updateNameDisplay();
                     }
                 }),
                 'blockBorder': () => selection.forEach(item => item.classList.contains('block') && (item.style.borderColor = color)),
                 'handle': () => selection.forEach(item => item.classList.contains('block') && item.style.setProperty('--handle-color', color)),
                 'text': () => applyStyleToSelection({ color: color }),
-                'arrow': () => selection.forEach(item => { if (item.classList.contains('arrow-group')) { item.querySelector('.arrow-line').setAttribute('stroke', color); updateSingleArrow(item); }}),
-                'gridBg': () => document.body.style.background = color,
+                'arrow': () => selection.forEach(item => { if (item.arrowInstance) { item.arrowInstance.color = color; item.arrowInstance.update(); } }), // Use instance properties
+                'gridBg': () => document.body.style.background = color, // Note: this will remove the gradient
                 'gridLines': () => grid.style.backgroundImage = `radial-gradient(${color} 1px, transparent 1px)`
             };
 
@@ -2665,33 +2773,9 @@
         function saveCurrentPageState() {
             if (isEditing) finishEditing();
             if (pages.length === 0 || currentPageIndex < 0) return;
-            pages[currentPageIndex] = {
-                blocks: Array.from(document.querySelectorAll('.block')).map(block => ({
-                    id: block.id,
-                    name: block.dataset.name,
-                    contentModel: block.contentModel,
-                    x: parseInt(block.style.left),
-                    y: parseInt(block.style.top),
-                    width: block.style.width,
-                    height: block.style.height,
-                    bgColor: block.style.backgroundColor,
-                    borderColor: block.style.borderColor,
-                    zIndex: parseInt(block.style.zIndex) || 0,
-                    handleColor: block.style.getPropertyValue('--handle-color'),
-                    handleDisplay: block.style.getPropertyValue('--handle-display'),
-                    familyId: block.dataset.familyId,
-                    showInList: block.dataset.showInList !== 'false'
-                })),
-                arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(arrowGroup => {
-                    const arrowLine = arrowGroup.querySelector('.arrow-line');
-                    return {
-                        startBlock: arrowGroup.dataset.startBlock,
-                        endBlock: arrowGroup.dataset.endBlock,
-                        color: arrowLine.getAttribute('stroke'),
-                        width: arrowLine.getAttribute('stroke-width'),
-                        bidirectional: arrowGroup.dataset.bidirectional === 'true',
-                    };
-                }),
+            pages[currentPageIndex] = { // Use arrowInstance which holds the state
+                blocks: Array.from(document.querySelectorAll('.block')).map(b => b.blockInstance.serialize()),
+                arrows: Array.from(svgCanvas.querySelectorAll('.arrow-group')).map(ag => ag.arrowInstance.serialize()), // Use arrowInstance which holds the state
                 styles: {
                     gridBg: document.body.style.background,
                     gridLines: grid.style.backgroundImage,
@@ -2747,16 +2831,13 @@
 
             if (state.blocks && Array.isArray(state.blocks)) {
                 state.blocks.forEach(blockConfig => {
-                    if(blockConfig) createBlock(blockConfig);
+                    // The Block constructor handles creation and appending to the grid
+                    if(blockConfig) new Block(blockConfig);
                 });
             }
             if (state.arrows && Array.isArray(state.arrows)) {
                 state.arrows.forEach(arrowData => {
-                    if(arrowData) {
-                        const startBlock = document.getElementById(arrowData.startBlock);
-                        const endBlock = document.getElementById(arrowData.endBlock);
-                        if (startBlock && endBlock) createArrow(arrowData);
-                    }
+                    if(arrowData) new Arrow(arrowData);
                 });
             }
         }
@@ -2966,39 +3047,33 @@
             const newZIndex = findHighestZIndex() + 1;
 
             selectedBlocks.forEach(block => {
-                const config = {
-                    x: parseInt(block.style.left) + offset,
-                    y: parseInt(block.style.top) + offset,
-                    width: block.style.width,
-                    height: block.style.height,
-                    contentModel: JSON.parse(JSON.stringify(block.contentModel)),
-                    name: `${block.dataset.name} (cópia)`,
-                    bgColor: block.style.backgroundColor,
-                    borderColor: block.style.borderColor,
-                    zIndex: newZIndex,
-                    handleColor: block.style.getPropertyValue('--handle-color'),
-                    handleDisplay: block.style.getPropertyValue('--handle-display'),
-                    familyId: block.dataset.familyId,
-                    showInList: block.dataset.showInList !== 'false'
-                };
-                const newBlock = createBlock(config);
-                idMap.set(block.id, newBlock.id);
-                newSelection.push(newBlock);
+                const oldInstance = block.blockInstance;
+                if (oldInstance) {
+                    const oldConfig = oldInstance.serialize();
+                    const config = {
+                        ...oldConfig,
+                        id: undefined, // Let constructor create a new one
+                        x: oldConfig.x + offset,
+                        y: oldConfig.y + offset,
+                        name: `${oldConfig.name.replace(/ \(cópia\)$/, '')} (cópia)`,
+                        zIndex: newZIndex,
+                    };
+                    const newBlockInstance = new Block(config);
+                    idMap.set(block.id, newBlockInstance.id);
+                    newSelection.push(newBlockInstance.element);
+                }
             });
 
             selectedArrows.forEach(arrow => {
                 const startId = arrow.dataset.startBlock;
                 const endId = arrow.dataset.endBlock;
                 if (idMap.has(startId) && idMap.has(endId)) {
-                    const arrowLine = arrow.querySelector('.arrow-line');
                     const newArrowData = {
+                        ...arrow.arrowInstance.serialize(),
                         startBlock: idMap.get(startId),
-                        endBlock: idMap.get(endId),
-                        color: arrowLine.getAttribute('stroke'),
-                        width: arrowLine.getAttribute('stroke-width'),
-                        bidirectional: arrow.dataset.bidirectional === 'true',
+                        endBlock: idMap.get(endId)
                     };
-                    const newArrowGroup = createArrow(newArrowData);
+                    const newArrowGroup = new Arrow(newArrowData).element;
                     newSelection.push(newArrowGroup);
                 }
             });
@@ -3007,49 +3082,13 @@
             newSelection.forEach(item => updateSelection(item, true));
             recordState();
         }
-
-        function createArrow(arrowData) {
-            const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            arrowGroup.classList.add('arrow-group');
-            arrowGroup.dataset.startBlock = arrowData.startBlock;
-            arrowGroup.dataset.endBlock = arrowData.endBlock;
-            
-            const arrowLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            arrowLine.classList.add('arrow-line');
-            arrowLine.setAttribute('stroke', arrowData.color);
-            arrowLine.setAttribute('stroke-width', arrowData.width);
-
-            const strokeWidth = parseFloat(arrowData.width) || 3;
-            const headSize = strokeWidth * 3 + 5;
-
-            const endMarkerId = `arrowhead-end-${arrowData.startBlock}-${arrowData.endBlock}`;
-            let marker = createOrUpdateMarker(endMarkerId, arrowData.color, headSize);
-            marker.setAttribute('orient', 'auto');
-            arrowLine.setAttribute('marker-end', `url(#${endMarkerId})`);
-
-            if (arrowData.bidirectional) {
-                arrowGroup.dataset.bidirectional = 'true';
-                const startMarkerId = `arrowhead-start-${arrowData.startBlock}-${arrowData.endBlock}`;
-                marker = createOrUpdateMarker(startMarkerId, arrowData.color, headSize);
-                marker.setAttribute('orient', 'auto-start-reverse');
-                arrowLine.setAttribute('marker-start', `url(#${startMarkerId})`);
-            }
-            
-            const hitbox = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            hitbox.classList.add('arrow-hitbox');
-            arrowGroup.appendChild(arrowLine);
-            arrowGroup.appendChild(hitbox);
-            svgCanvas.appendChild(arrowGroup);
-            updateSingleArrow(arrowGroup);
-            return arrowGroup;
-        }
-
+        
         function getBlockCenter(block) {
             const x = parseInt(block.style.left);
             const y = parseInt(block.style.top);
             return { x: x + block.offsetWidth / 2, y: y + block.offsetHeight / 2 };
         }
-        
+
         function getClosestConnectionPoint(from, to) {
             const fromRect = { x: parseInt(from.style.left), y: parseInt(from.style.top), width: from.offsetWidth, height: from.offsetHeight };
             const toRect = { x: parseInt(to.style.left), y: parseInt(to.style.top), width: to.offsetWidth, height: to.offsetHeight };
@@ -3077,7 +3116,7 @@
             }
             return { x: pointX, y: pointY };
         }
-        
+
         function download(filename, text) {
             const element = document.createElement('a');
             element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(text));
@@ -3234,29 +3273,6 @@
 
         // --- Mecanismo de Edição de Texto ---
 
-        function renderContent(model, element) {
-            element.innerHTML = '';
-            if (!model || model.length === 0) {
-                element.innerHTML = '<br>';
-                return;
-            }
-            model.forEach(span => {
-                if (span.isHTML) {
-                    element.insertAdjacentHTML('beforeend', span.text);
-                    return;
-                }
-                const spanEl = document.createElement('span');
-                spanEl.textContent = span.text;
-                
-                Object.entries(span.style).forEach(([key, value]) => {
-                    if (value) {
-                         spanEl.style[key] = value;
-                    }
-                });
-                element.appendChild(spanEl);
-            });
-        }
-
         function parseContent(element, initialHTML = null) {
             const model = [];
             const source = initialHTML ? document.createElement('div') : element;
@@ -3386,7 +3402,11 @@
             });
             
             activeContentModel = mergeModel(newModel);
-            renderContent(activeContentModel, activeEditingElement);
+            
+            const blockInstance = activeEditingElement.closest('.block').blockInstance;
+            blockInstance.contentModel = activeContentModel;
+            blockInstance.renderContent();
+
             restoreSelection(selectionIndices);
         }
         
@@ -3447,6 +3467,7 @@
         }
 
         // --- Block Naming and Sidebar List ---
+
         let draggedListItem = null;
 
         function updateBlocksList() {
@@ -3469,12 +3490,16 @@
                     const blockEl = document.getElementById(blockData.id);
                     if (blockEl) {
                         updateSelection(blockEl, e.shiftKey, true);
-                        const containerRect = container.getBoundingClientRect();
-                        const margin = 50;
-                        
-                        // Preserve current scale, don't reset it.
-                        gridX = -blockEl.offsetLeft * scale + margin;
-                        gridY = -blockEl.offsetTop * scale + margin;
+                        // Define a margin from the top-left corner of the viewport
+                        const margin = 50; 
+
+                        // Calculate the required grid translation to place the block at the margin, respecting the current scale.
+                        const newGridX = margin - (blockEl.offsetLeft * scale); // Preserve current scale
+                        const newGridY = margin - (blockEl.offsetTop * scale); // Preserve current scale
+
+                        // Ensure grid coordinates do not become positive
+                        gridX = Math.min(0, newGridX);
+                        gridY = Math.min(0, newGridY);
 
                         updateGridTransform();
                     }
@@ -3547,7 +3572,7 @@
 
         function findHighestZIndex() {
             const blocks = document.querySelectorAll('.block');
-            let maxZ = 0;
+            let maxZ = 10; // Base z-index for blocks, must be > arrow-svg z-index
             blocks.forEach(block => {
                 const z = parseInt(block.style.zIndex);
                 if (!isNaN(z) && z > maxZ) {
@@ -3557,36 +3582,13 @@
             return maxZ;
         }
 
-
-        function updateBlockNameDisplay(block) {
-            const nameEl = block.querySelector('.block-name');
-            const blockName = block.dataset.name;
-
-            const isDefaultName = blockName.startsWith('Bloco ') && !isNaN(parseInt(blockName.split(' ')[1]));
-            const isCopyName = blockName.endsWith(' (cópia)');
-
-            if (isDefaultName || isCopyName) {
-                nameEl.style.display = 'none';
-            } else {
-                nameEl.style.display = '';
-                nameEl.textContent = blockName;
-                const bgColor = getComputedStyle(block).backgroundColor;
-                const rgb = bgColor.match(/\d+/g);
-                if (rgb) {
-                    const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
-                    nameEl.style.color = brightness < 128 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.7)';
-                }
-            }
-        }
-        
         function startRenamingBlock() {
             if (selection.length !== 1 || !lastSelectedItem?.classList.contains('block')) return;
             const blockName = lastSelectedItem.dataset.name;
-            const isDefaultName = blockName.startsWith('Bloco ') && !isNaN(parseInt(blockName.split(' ')[1]));
-            const isCopyName = blockName.endsWith(' (cópia)');
+            const isDefaultName = (blockName.startsWith('Bloco ') && !isNaN(parseInt(blockName.split(' ')[1]))) || blockName.endsWith(' (cópia)');
 
             renameBlockForm.classList.remove('hidden');
-            renameBlockInput.value = (isDefaultName || isCopyName) ? '' : blockName;
+            renameBlockInput.value = isDefaultName ? '' : blockName;
             renameBlockInput.placeholder = blockName;
             renameBlockInput.focus();
             renameBlockInput.select();
@@ -3598,13 +3600,14 @@
             const oldName = blockToRename.dataset.name;
             const wasDefaultOrCopy = (oldName.startsWith('Bloco ') && !isNaN(parseInt(oldName.split(' ')[1]))) || oldName.endsWith(' (cópia)');
 
-            const newName = renameBlockInput.value.trim();
+            const newName = renameBlockInput.value.trim() || renameBlockInput.placeholder;
             if (newName) {
+                blockToRename.blockInstance.name = newName;
                 blockToRename.dataset.name = newName;
-                updateBlockNameDisplay(blockToRename);
-
+                blockToRename.blockInstance.updateNameDisplay();
                 if (wasDefaultOrCopy && blockToRename.dataset.showInList !== 'true') {
                     blockToRename.dataset.showInList = 'true';
+                    blockToRename.blockInstance.showInList = true;
                     showInListCheckbox.checked = true;
                 }
 
